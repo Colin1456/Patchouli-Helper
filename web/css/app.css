@@ -178,16 +178,29 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---------------------------------------------------------------- layout */
 
 .layout {
-  --sidebar-w: 272px;
-  --preview-w: 46%;
-  display: grid;
-  /* 始终横向三栏：窗口再窄也不换行、不堆叠，改成一整条横向滚动 */
-  grid-template-columns: var(--sidebar-w) 5px minmax(300px, 1fr) 5px minmax(240px, var(--preview-w));
+  --sidebar-w: clamp(150px, 20vw, 272px);
+  --preview-w: clamp(180px, 46%, 780px);
+  /* 兜底：不支持 grid 的渲染器（老内核 / 受限 WebView）用 flex 也保持横向三栏 */
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
 }
+@supports (display: grid) {
+  .layout {
+    display: grid;
+    /* 始终横向三栏：窗口再窄也只是等比收窄，绝不换行、绝不堆叠 */
+    grid-template-columns: var(--sidebar-w) 5px minmax(0, 1fr) 5px var(--preview-w);
+  }
+  .layout > .sidebar { flex: 0 0 var(--sidebar-w); }
+}
+.layout > .sidebar { width: var(--sidebar-w); flex: 0 0 auto; }
+.layout > .editor { flex: 1 1 auto; }
+.layout > .preview { flex: 0 0 var(--preview-w); }
+.layout > .splitter { flex: 0 0 5px; }
 .layout > * { min-width: 0; }
 .layout::-webkit-scrollbar { height: 8px; }
 .layout::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }

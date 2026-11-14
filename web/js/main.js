@@ -161,6 +161,10 @@ function renderChrome() {
   $('status-lang').textContent = state.ui.lang;
   const pages = project.entries.reduce((sum, entry) => sum + (entry.pages?.length || 0), 0);
   $('status-counts').textContent = `${project.categories.length} 分类 · ${project.entries.length} 条目 · ${pages} 页`;
+  const buildEl = $('status-build');
+  if (buildEl) buildEl.textContent = globalThis.__BUILD__ ? `build ${globalThis.__BUILD__}` : 'dev';
+  const viewportEl = $('status-viewport');
+  if (viewportEl) viewportEl.textContent = `${Math.round(window.innerWidth)}×${Math.round(window.innerHeight)}`;
   $('brand-sub').textContent = project.meta?.name || '帕秋莉手册可视化编辑器';
 }
 
@@ -608,10 +612,10 @@ function setupSplitters() {
       if (!splitter.classList.contains('dragging')) return;
       const rect = layout.getBoundingClientRect();
       if (mode === 'sidebar') {
-        const width = clamp(event.clientX - rect.left, 180, Math.min(480, rect.width * 0.4));
+        const width = clamp(event.clientX - rect.left, 150, Math.min(420, rect.width * 0.4));
         layout.style.setProperty('--sidebar-w', `${Math.round(width)}px`);
       } else {
-        const width = clamp(rect.right - event.clientX, 220, Math.max(260, rect.width * 0.72));
+        const width = clamp(rect.right - event.clientX, 180, Math.max(220, rect.width * 0.72));
         layout.style.setProperty('--preview-w', `${Math.round(width)}px`);
       }
     });
@@ -664,6 +668,10 @@ window.addEventListener('drop', async (event) => {
 });
 
 setupSplitters();
+window.addEventListener('resize', () => {
+  const el = $('status-viewport');
+  if (el) el.textContent = `${Math.round(window.innerWidth)}×${Math.round(window.innerHeight)}`;
+});
 render('all');
 
 // expose for debugging in the webview console (and for scripts/app-check.mjs)

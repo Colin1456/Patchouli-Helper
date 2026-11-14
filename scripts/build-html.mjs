@@ -53,9 +53,16 @@ const head = [
   '    </style>',
 ].filter(Boolean).join('\n');
 
+// 构建时间戳：状态栏会显示，方便确认打开的是不是最新那份文件
+const stamp = new Date()
+  .toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' })
+  .replace(/:\d\d$/, '')
+  .slice(2);
+
 const script = [
   '    <script>',
-  '    /*! Patchouli Helper - 单文件版（由 scripts/build-html.mjs 生成，请勿手改） */',
+  `    /*! Patchouli Helper 单文件版 build ${stamp}（由 scripts/build-html.mjs 生成，请勿手改） */`,
+  `    window.__BUILD__ = ${JSON.stringify(stamp)};`,
   js,
   '    </script>',
 ].join('\n');
