@@ -1,34 +1,35 @@
-# ── 依赖与构建产物 ──
+# ---- 依赖与构建产物 ----
 node_modules/
 src-tauri/target/
 src-tauri/gen/schemas/
 dist/
+userdata/
 
-# ── 工程文件的临时/备份文件 ──
-# 注：*.phbook 本身是用户作品，默认**不**忽略；
-#     想连工程文件一起忽略就取消下面这行注释。
+# ---- 本地验证 / 调试产物 ----
+.app-check/
+.webview-data/
+ui-check*.png
+ui-check.json
+
+# ---- 工程文件临时备份 ----
+# *.phbook 是用户自己的作品，默认保留；想一并忽略就取消下面这行注释
 # *.phbook
 *.phbook.tmp
 *.phbook~
 *.phbook.bak
 .~*.phbook
 
-# ── 调研资料（反编译源码 / jar / 抓下来的 wiki 文档，体积大且不该分发） ──
+# ---- 调研资料（反编译源码 / jar，体积大且不该分发）----
 _research/
 
-# ── 本地工具数据（meow-memory 的记忆库与日志） ──
+# ---- 本地工具数据（meow-memory 记忆库与日志）----
 .dsh-meow/
 
-# ── 系统与编辑器杂项 ──
+# ---- 系统与编辑器杂项 ----
 .DS_Store
 Thumbs.db
 desktop.ini
-*.log
 .idea/
 .vscode/
-
-# local verification artifacts
-.app-check/
-.webview-data/
-ui-check*.png
-ui-check.json
+*.log
+npm-debug.log*

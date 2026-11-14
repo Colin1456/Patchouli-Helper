@@ -318,7 +318,7 @@ Windows x64 可执行文件已构建完成，**在 `dist\` 目录里，两个文
 - `dist/Patchouli-Helper-0.1.0-win64.exe`（3.4 MB）
 - `dist/WebView2Loader.dll`（157 KB）← GNU 工具链构建时它是动态链接的，缺了会报「找不到 WebView2Loader.dll」
 
-要分发就整个 `dist\` 文件夹一起发（或直接双击根目录的 `启动-Patchouli-Helper.bat`，它会先检查 dll 再启动）。想重新打包：`powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1`
+要分发就整个 `dist\` 文件夹一起发（或直接双击 `scripts/launch-windows.bat`，它会先检查 dll 再启动）。想重新打包：`powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1`
 
 界面截图见 [docs/screenshot.png](docs/screenshot.png)（真实 Tauri 窗口，由 `scripts/app-check.mjs` 自动抓取）。
 
@@ -360,10 +360,10 @@ cd src-tauri && cargo build --release
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| 弹窗「找不到 WebView2Loader.dll」/「代码执行无法继续」 | GNU 工具链构建的 exe 动态依赖该 DLL，而它不在 exe 同级目录 | 把 `dist/WebView2Loader.dll` 与 exe 放同一目录；`scripts/package-windows.ps1` 会自动复制，`启动-Patchouli-Helper.bat` 启动前也会检查 |
+| 弹窗「找不到 WebView2Loader.dll」/「代码执行无法继续」 | GNU 工具链构建的 exe 动态依赖该 DLL，而它不在 exe 同级目录 | 把 `dist/WebView2Loader.dll` 与 exe 放同一目录；`scripts/package-windows.ps1` 会自动复制，`scripts/launch-windows.bat` 启动前也会检查 |
 | 弹窗「应用程序无法正常启动 (0xc0000409)」或一闪就退出 | WebView2 无法创建用户数据目录（只读 `%LOCALAPPDATA%`、被沙箱/重定向规则限制） | **0.1.1 起已修复**：程序会依次尝试 `%LOCALAPPDATA%`、`%APPDATA%`、`%TEMP%`、exe 同目录，找到可写目录并显式传给 WebView2；同时把详细错误写进 `crash.log` |
 | 弹「Windows 已保护你的电脑」 | exe 未签名，被 SmartScreen 拦截 | 点「更多信息 → 仍要运行」；或右键属性勾选「解除锁定」 |
-| 弹「找不到文件 …」 | 指向了已删除的 `src-tauri/target/debug/patchouli-helper.exe`（该目录已清理） | 用 `dist/Patchouli-Helper-0.1.0-win64.exe` 或双击根目录的 `启动-Patchouli-Helper.bat` |
+| 弹「找不到文件 …」 | 指向了已删除的 `src-tauri/target/debug/patchouli-helper.exe`（该目录已清理） | 用 `dist/Patchouli-Helper-0.1.0-win64.exe` 或双击 `scripts/launch-windows.bat` |
 | 双击后没有任何窗口，也没有弹窗 | 极少见；多为进程被安全软件静默拦截 | 看 `%LOCALAPPDATA%\com.colin.patchoulihelper\crash.log`（或 `%TEMP%` 下同名目录），把内容发我 |
 
 排查文件：`crash.log` 会写在程序选中的可写目录里（优先 `%LOCALAPPDATA%\com.colin.patchoulihelper\`，其次 `%TEMP%\com.colin.patchoulihelper\`、exe 旁边的 `userdata\`）。

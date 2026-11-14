@@ -1,0 +1,20 @@
+# 统一换行，避免 Windows/Unix 之间的 CRLF 抖动
+* text=auto eol=lf
+
+# 前端静态资源
+*.html text
+*.js   text
+*.css  text
+*.json text
+*.md   text
+*.rs   text
+*.toml text
+*.yml  text
+*.bat  text eol=crlf
+
+# 二进制
+*.png  binary
+*.ico  binary
+*.icns binary
+*.exe  binary
+*.dll  binary

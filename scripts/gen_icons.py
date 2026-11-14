@@ -73,7 +73,6 @@ save(128, "128x128.png")
 save(256, "128x128@2x.png")
 save(512, "icon.png")
 img.resize((128, 128), Image.LANCZOS).save(os.path.join(WEB, "icon-128.png"))
-img.resize((64, 64), Image.LANCZOS).save(os.path.join(WEB, "icon-64.png"))
 
 img.save(os.path.join(OUT, "icon.ico"), sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
 try:
