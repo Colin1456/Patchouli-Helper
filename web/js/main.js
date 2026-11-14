@@ -163,7 +163,6 @@ function renderChrome() {
   const pages = project.entries.reduce((sum, entry) => sum + (entry.pages?.length || 0), 0);
   $('status-counts').textContent = `${project.categories.length} 分类 · ${project.entries.length} 条目 · ${pages} 页`;
   $('brand-sub').textContent = project.meta?.name || '帕秋莉手册可视化编辑器';
-  if (!io.isDesktop()) $('brand-sub').textContent += ' · 浏览器预览模式';
 }
 
 function hasTranslation(project, lang) {
@@ -346,76 +345,10 @@ async function exportResourcePackZip() {
   const resourceZip = await buildZip(zipEntries(plan.resourcePackFiles));
   const dataZip = await buildZip(zipEntries(plan.dataPackFiles));
 
-  if (!io.isDesktop()) {
-    io.downloadBytes(resourceZip, `${baseName}-resourcepack.zip`);
-    io.downloadBytes(dataZip, `${baseName}-datapack.zip`);
-    io.downloadBytes(readmeText(project), `${baseName}-INSTALL.txt`, 'text/plain');
-    toast('浏览器模式：已下载两个 zip 与安装说明', 'ok');
-    return;
-  }
-  const target = await io.pickSaveFile({
-    title: '保存资源包 zip',
-    defaultPath: `${baseName}-resourcepack.zip`,
-    filters: [{ name: 'Zip 压缩包', extensions: ['zip'] }],
-  });
-  if (!target) return;
-  const { dir, name } = io.splitPath(target);
-  const dataPath = `${dir}/${name.replace(/\.zip$/i, '')}-datapack.zip`;
-  await io.writeBinaryFile(target, resourceZip);
-  await io.writeBinaryFile(dataPath, dataZip);
-  await io.writeTextFile(`${dir}/${name.replace(/\.zip$/i, '')}-INSTALL.txt`, readmeText(project));
-  toast(`已导出：${name} 与 ${name.replace(/\.zip$/i, '')}-datapack.zip`, 'ok', 4200);
-  io.revealPath(dir).catch(() => {});
-}
-
-async function exportResourcePackFolder() {
-  const project = store.state.project;
-  const plan = buildExport(project, { mode: 'resourcepack' });
-  const baseName = `${project.modid}-${project.bookId}`;
-
-  if (!io.isDesktop()) {
-    toast('浏览器模式无法直接写文件夹，请使用「资源包（zip）」', 'err');
-    return;
-  }
-  const dir = await io.pickFolder({ title: '选择导出位置（会新建两个子文件夹）' });
-  if (!dir) return;
-  const root = `${dir}/${baseName}-export`;
-  await io.writeFiles(`${root}/resourcepack`, plan.resourcePackFiles);
-  await io.writeFiles(`${root}/datapack`, plan.dataPackFiles);
-  await io.writeTextFile(`${root}/安装说明.md`, readmeText(project));
-  toast(`已导出到 ${root}`, 'ok', 4200);
-  io.revealPath(root).catch(() => {});
-}
-
-async function exportModAssets() {
-  const project = store.state.project;
-  const plan = buildExport(project, { mode: 'mod' });
-
-  if (!io.isDesktop()) {
-    toast('浏览器模式无法写入模组工程，请使用桌面版', 'err');
-    return;
-  }
-  const dir = await io.pickFolder({ title: '选择模组工程目录（含 src/main/resources 或直接是 resources）' });
-  if (!dir) return;
-
-  let root = dir;
-  const hasResources = await io.pathExists(`${dir}/src/main/resources`).catch(() => false);
-  if (hasResources) root = `${dir}/src/main/resources`;
-
-  const ok = await confirmModal({
-    title: '写入模组工程',
-    message: h('div', {},
-      h('p', {}, `将写入 ${plan.files.length} 个文件到：`),
-      h('p', { class: 'mono' }, root),
-      h('p', { class: 'faint' }, '同名文件会被覆盖（生成前建议先提交一次 git）。'),
-    ),
-    confirmText: '写入',
-  });
-  if (!ok) return;
-
-  await io.writeFiles(root, plan.files);
-  toast(`已写入 ${plan.files.length} 个文件到 ${root}`, 'ok', 4200);
-  io.revealPath(root).catch(() => {});
+  io.downloadBytes(resourceZip, `${baseName}-resourcepack.zip`);
+  io.downloadBytes(dataZip, `${baseName}-datapack.zip`);
+  io.downloadBytes(readmeText(project), `${baseName}-INSTALL.txt`, 'text/plain');
+  toast('已下载资源包、数据包与安装说明', 'ok', 4200);
 }
 
 async function exportWholeBookModal() {
@@ -424,7 +357,7 @@ async function exportWholeBookModal() {
   filesModal({
     title: '整书导出内容',
     files: plan.files.map((file) => ({ path: file.path, data: file.base64 ? '（二进制图片）' : file.data })),
-    note: `共 ${plan.files.length} 个文件；这是「直接写入模组工程 assets」时会生成的全部内容。`,
+    note: `共 ${plan.files.length} 个文件；这是整本书会生成的全部 JSON 与资源文件。`,
   });
 }
 
@@ -618,8 +551,6 @@ document.addEventListener('click', (event) => {
     case 'validate': problemsDialog(); break;
     case 'toggle-export': target.closest('.dropdown')?.classList.toggle('open'); break;
     case 'export-resourcepack': exportResourcePackZip(); break;
-    case 'export-folder': exportResourcePackFolder(); break;
-    case 'export-mod-assets': exportModAssets(); break;
     case 'export-json': exportCurrentJson(); break;
     case 'export-snapshot': exportWholeBookModal(); break;
     case 'add-category': {

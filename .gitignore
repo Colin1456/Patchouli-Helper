@@ -1,15 +1,10 @@
 # ---- 依赖与构建产物 ----
 node_modules/
-src-tauri/target/
-src-tauri/gen/schemas/
 dist/*
 # 单文件版是发布物，单独放行（约 155KB）
 !dist/Patchouli-Helper.html
-userdata/
 
 # ---- 本地验证 / 调试产物 ----
-.app-check/
-.webview-data/
 ui-check*.png
 ui-check.json
 
@@ -35,3 +30,4 @@ desktop.ini
 .vscode/
 *.log
 npm-debug.log*
+docs/screenshot-json.png

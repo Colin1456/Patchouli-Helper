@@ -6,18 +6,12 @@
     "type": "module",
     "scripts": {
         "dev": "node scripts/start-web.mjs",
-        "tauri": "tauri",
-        "tauri:dev": "tauri dev",
-        "tauri:build": "tauri build",
         "test": "node --test tests/core.test.mjs",
-        "ui:check": "node scripts/ui-check.mjs http://127.0.0.1:4173/ ui-check.png",
-        "app:check": "node scripts/app-check.mjs src-tauri/target/release/patchouli-helper.exe app-check.json",
-        "package:win": "powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1",
         "build:html": "node scripts/build-html.mjs",
+        "ui:check": "node scripts/ui-check.mjs http://127.0.0.1:4173/ ui-check.png",
         "check:html": "node scripts/ui-check.mjs file:///C:/Users/Colin/Desktop/Patchouli-Helper/dist/Patchouli-Helper.html ui-check.png"
     },
     "devDependencies": {
-        "@tauri-apps/cli": "^2.1.0",
         "esbuild": "^0.28.2"
     }
 }
