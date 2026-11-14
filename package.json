@@ -1,20 +1,23 @@
 {
-    "name":  "patchouli-helper",
-    "private":  true,
-    "version":  "0.1.0",
-    "description":  "Visual editor for Minecraft Patchouli guide books (Forge 1.20.1 / NeoForge 1.21.1)",
-    "type":  "module",
-    "scripts":  {
-                    "dev":  "node scripts/start-web.mjs",
-                    "tauri":  "tauri",
-                    "tauri:dev":  "tauri dev",
-                    "tauri:build":  "tauri build",
-                    "test":  "node --test tests/core.test.mjs",
-                    "ui:check":  "node scripts/ui-check.mjs http://127.0.0.1:4173/ ui-check.png",
-                    "app:check":  "node scripts/app-check.mjs src-tauri/target/release/patchouli-helper.exe app-check.json",
-                    "package:win":  "powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1"
-                },
-    "devDependencies":  {
-                            "@tauri-apps/cli":  "^2.1.0"
-                        }
+    "name": "patchouli-helper",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Visual editor for Minecraft Patchouli guide books (Forge 1.20.1 / NeoForge 1.21.1)",
+    "type": "module",
+    "scripts": {
+        "dev": "node scripts/start-web.mjs",
+        "tauri": "tauri",
+        "tauri:dev": "tauri dev",
+        "tauri:build": "tauri build",
+        "test": "node --test tests/core.test.mjs",
+        "ui:check": "node scripts/ui-check.mjs http://127.0.0.1:4173/ ui-check.png",
+        "app:check": "node scripts/app-check.mjs src-tauri/target/release/patchouli-helper.exe app-check.json",
+        "package:win": "powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1",
+        "build:html": "node scripts/build-html.mjs",
+        "check:html": "node scripts/ui-check.mjs file:///C:/Users/Colin/Desktop/Patchouli-Helper/dist/Patchouli-Helper.html ui-check.png"
+    },
+    "devDependencies": {
+        "@tauri-apps/cli": "^2.1.0",
+        "esbuild": "^0.28.2"
+    }
 }

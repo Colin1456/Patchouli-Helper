@@ -2,7 +2,9 @@
 node_modules/
 src-tauri/target/
 src-tauri/gen/schemas/
-dist/
+dist/*
+# 单文件版是发布物，单独放行（约 155KB）
+!dist/Patchouli-Helper.html
 userdata/
 
 # ---- 本地验证 / 调试产物 ----

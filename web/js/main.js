@@ -9,6 +9,7 @@ import { buildZip } from './zip.js';
 import * as io from './io.js';
 import { importBookFiles } from './import.js';
 import { LANGUAGE_OPTIONS, LOADER_PROFILES, PROFILE_IDS, getProfile, shortLang } from './profiles.js';
+import { PAGE_TYPE_KEYS } from './schema.js';
 import { renderTree } from './ui/tree.js';
 import { renderEditor } from './ui/editor.js';
 import { renderBookPreview, renderJsonPreview, previewPageCount } from './ui/preview.js';
@@ -799,4 +800,14 @@ setupSplitters();
 render('all');
 
 // expose for debugging in the webview console (and for scripts/app-check.mjs)
-globalThis.__PATCHOULI_HELPER__ = { store, actions, buildExport, buildLangFile, buildZip, getText, io };
+globalThis.__PATCHOULI_HELPER__ = {
+  store,
+  actions,
+  buildExport,
+  buildLangFile,
+  buildZip,
+  getText,
+  io,
+  pageTypes: PAGE_TYPE_KEYS,
+  newPage,
+};

@@ -36,6 +36,7 @@ const child = spawn(browser, [
   '--no-first-run',
   '--no-default-browser-check',
   '--disable-extensions',
+  '--allow-file-access-from-files',
   `--remote-debugging-port=${PORT}`,
   '--window-size=1500,940',
   'about:blank',
@@ -122,7 +123,19 @@ await send('Page.navigate', { url: URL_TARGET });
 await sleep(2500);
 
 const checks = [];
-const check = (name, ok, detail = '') => checks.push({ name, ok: Boolean(ok), detail });
+const check = (name, ok, detail = '') => {
+  checks.push({ name, ok: Boolean(ok), detail });
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`);
+};
+
+/** evaluate + never throw: returns { ok, value, error } */
+const safeEval = async (expression) => {
+  try {
+    return { ok: true, value: await evaluate(expression) };
+  } catch (error) {
+    return { ok: false, value: null, error: String(error.message || error) };
+  }
+};
 
 const layout = await evaluate(`(() => {
   const tree = document.querySelectorAll('#tree .tree-node').length;
@@ -207,14 +220,13 @@ const validateState = await evaluate(`(async () => {
 check('校验弹窗', validateState.opened, JSON.stringify(validateState));
 
 // render every page type without exploding
-const allTypes = await evaluate(`(async () => {
-  const schema = await import('/js/schema.js');
-  const model = await import('/js/model.js');
-  const store = window.__PATCHOULI_HELPER__.store;
+const allTypesResult = await safeEval(`(async () => {
+  const helper = window.__PATCHOULI_HELPER__;
+  const store = helper.store;
   const entry = store.state.project.entries[0];
-  const types = schema.PAGE_TYPE_KEYS;
+  const types = helper.pageTypes;
   store.apply(() => {
-    entry.pages = types.map((type) => model.newPage(type, {
+    entry.pages = types.map((type) => helper.newPage(type, {
       recipe: 'minecraft:crafting_table',
       item: 'minecraft:iron_ingot',
       entity: 'minecraft:cow',
@@ -238,8 +250,13 @@ const allTypes = await evaluate(`(async () => {
     spreads,
   };
 })()`);
-check('全部 16 种页型都能渲染', allTypes.types === 16 && allTypes.pageCards === 16, JSON.stringify(allTypes));
-check('结构化页型有预览块', allTypes.blocks >= 1, `blocks=${allTypes.blocks}`);
+const allTypes = allTypesResult.value || {};
+check(
+  '全部 16 种页型都能渲染',
+  allTypesResult.ok && allTypes.types === 16 && allTypes.pageCards === 16,
+  allTypesResult.ok ? JSON.stringify(allTypes) : allTypesResult.error,
+);
+check('结构化页型有预览块', (allTypes.blocks || 0) >= 1, `blocks=${allTypes.blocks}`);
 
 // column splitter: drag the preview divider and make sure the spread follows
 const splitterInfo = await evaluate(`(() => {

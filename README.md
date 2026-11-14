@@ -373,3 +373,25 @@ cd src-tauri && cargo build --release
 - 两条**可拖拽分隔条**：左侧「书籍结构」右侧、编辑器与预览之间，鼠标按住左右拖即可改宽度；**双击分隔条复位**。位置存 `localStorage`，下次打开保持。
 - 书页预览会按可用高度自动缩放（`ResizeObserver` 监听容器），窗口再小也不会被裁掉；右下角 `⤢` 按钮可切「铺满宽度」。
 - 高度 ≤ 780px 时自动进入紧凑模式（顶栏变矮、品牌副标题隐藏、卡片内边距收窄）。
+## 单文件 HTML 版（推荐：双击即用，无需安装）
+
+`dist/Patchouli-Helper.html` —— 一个 **155 KB 的 HTML 文件**，CSS / JS / 图标全部内联，
+双击用 Edge / Chrome / Firefox 打开就能用，不需要 Node、不需要安装、不需要联网。
+换机器只要拷贝这一个文件。
+
+```bash
+npm run build:html     # 重新生成 dist/Patchouli-Helper.html
+npm run check:html     # 无头浏览器跑 22 项界面断言（file:// 场景）
+```
+
+单文件版与桌面版功能一致，唯一差别：
+
+| 能力 | 单文件 HTML | 桌面版 (Tauri) |
+|---|---|---|
+| 编辑 / 预览 / 校验 / 导入 / 工程存取 | ✅ | ✅ |
+| 导出资源包 zip、数据包 zip | ✅ 浏览器下载 | ✅ 原生保存对话框 |
+| 直接写入模组工程 `src/main/resources` | ❌ 只能下载 zip 自己解压 | ✅ |
+| 拖入文件夹批量导入书籍 | ✅ | ✅ |
+
+> 单文件版把工程自动存在浏览器 `localStorage`，换浏览器就是新的空白工程；
+> 重要工程请用顶栏「保存」导出 `.phbook` 文件。
