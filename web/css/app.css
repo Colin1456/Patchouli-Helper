@@ -484,7 +484,6 @@ input[type='number'] { -moz-appearance: textfield; }
 }
 .page-title::after { content: ''; display: block; width: 46px; height: 1px; margin: 6px auto 0; background: linear-gradient(90deg, transparent, #a98e63, transparent); }
 .page-body { font-size: 12.5px; line-height: 1.62; overflow: hidden; flex: 1; }
-.page-footer { margin-top: 6px; font-size: 9.5px; color: #9b8a6a; text-align: center; font-family: var(--font-mono); }
 
 /* Patchouli rich text inside the book preview */
 .rich { word-break: break-word; }

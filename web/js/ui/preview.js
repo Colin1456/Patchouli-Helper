@@ -191,12 +191,10 @@ export function renderBookPreview(container, ctx) {
         leftPage.appendChild(h('div', { class: 'page-title' }, stripCodes(getText(entry.data, 'name', lang))));
         leftPage.appendChild(emptyPage('这一页是空白的'));
       }
-      leftPage.appendChild(h('div', { class: 'page-footer' }, `${entry.id} · ${leftIndex + 1}`));
 
       rightPage = pageShell(lang, project, 'right', true);
       if (pages[rightIndex]) {
         rightPage.append(...renderPageInto(lang, project, entry, pages[rightIndex]));
-        rightPage.appendChild(h('div', { class: 'page-footer' }, `${entry.id} · ${rightIndex + 1}`));
       } else {
         rightPage.appendChild(h('div', { class: 'page-body' }, h('div', { class: 'index-empty' }, '（本条目在这里结束）')));
       }
@@ -234,10 +232,6 @@ export function renderBookPreview(container, ctx) {
       h('div', { class: 'page-title' }, stripCodes(getText(project.book, 'name', lang)) || '未命名书籍'),
       h('div', { class: 'page-body' }, richBlock(getText(project.book, 'landingText', lang), macros)),
     );
-    const version = String(project.book?.version || '');
-    if (version) {
-      leftPage.appendChild(h('div', { class: 'page-footer' }, version === '0' ? '' : `${version} Edition`));
-    }
     rightPage = pageShell(lang, project, 'right', true);
     const grid = h('div', { class: 'index-grid' });
     for (const category of sortBySortnumThenName(project.categories, lang)) {
