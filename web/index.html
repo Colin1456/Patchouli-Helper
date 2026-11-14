@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Patchouli Helper — 帕秋莉手册可视化编辑器</title>
+    <link rel="stylesheet" href="./css/app.css" />
+    <link rel="icon" href="./assets/icon-128.png" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">P</div>
+          <div class="brand-text">
+            <strong>Patchouli Helper</strong>
+            <span id="brand-sub">帕秋莉手册可视化编辑器</span>
+          </div>
+        </div>
+
+        <div class="topbar-group" id="project-group">
+          <button class="btn ghost" data-action="new-project" title="新建书籍工程">新建</button>
+          <button class="btn ghost" data-action="open-project" title="从 .phbook 工程文件打开">打开</button>
+          <button class="btn ghost" data-action="save-project" title="保存到 .phbook 工程文件">保存</button>
+          <button class="btn ghost" data-action="import-book" title="从已有的 Patchouli 书籍目录 / 资源包导入">导入</button>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="lang-switch" id="lang-switch" title="编辑中的内容语言（导出时每种语言各生成一套 JSON）"></div>
+
+        <div class="topbar-group">
+          <button class="btn ghost" data-action="validate" title="检查引用、图标、本地化等完整性问题">
+            校验 <span class="badge" id="problem-count">0</span>
+          </button>
+          <div class="dropdown">
+            <button class="btn primary" data-action="toggle-export">导出 ▾</button>
+            <div class="dropdown-menu" id="export-menu">
+              <button data-action="export-resourcepack">资源包（zip）…</button>
+              <button data-action="export-folder">资源包（文件夹）…</button>
+              <button data-action="export-mod-assets">写入模组工程 assets…</button>
+              <hr />
+              <button data-action="export-json">导出当前页 JSON（复制）</button>
+              <button data-action="export-snapshot">整书 JSON 打包…</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="sidebar">
+          <div class="side-head">
+            <span>书籍结构</span>
+            <span class="hint" id="tree-count"></span>
+          </div>
+          <div class="tree" id="tree"></div>
+          <div class="side-foot">
+            <button class="btn tiny" data-action="add-category">+ 分类</button>
+            <button class="btn tiny" data-action="add-entry">+ 条目</button>
+          </div>
+        </aside>
+
+        <div class="splitter" data-split="sidebar" title="拖动调整左侧宽度（双击复位）"></div>
+
+        <section class="editor" id="editor">
+          <div class="empty-state">
+            <div class="empty-emoji">📖</div>
+            <h2>从左侧选择一个分类或条目</h2>
+            <p>也可以直接点「新建」开始一本新书。</p>
+          </div>
+        </section>
+
+        <div class="splitter" data-split="preview" title="拖动调整预览宽度（双击复位）"></div>
+
+        <section class="preview" id="preview">
+          <div class="preview-head">
+            <div class="tabs" id="preview-tabs">
+              <button class="tab active" data-preview="book">书页预览</button>
+              <button class="tab" data-preview="json">JSON 预览</button>
+            </div>
+            <div class="preview-tools">
+              <button class="icon-btn" data-action="preview-prev" title="上一页">‹</button>
+              <span class="page-indicator" id="page-indicator">1 / 1</span>
+              <button class="icon-btn" data-action="preview-next" title="下一页">›</button>
+              <button class="icon-btn" data-action="preview-zoom" title="缩放">⤢</button>
+            </div>
+          </div>
+          <div class="preview-body" id="preview-body"></div>
+        </section>
+      </main>
+
+      <footer class="statusbar">
+        <span id="status-project">未命名工程</span>
+        <span class="dot">·</span>
+        <span id="status-profile">Forge 1.20.1</span>
+        <span class="dot">·</span>
+        <span id="status-dirty">已保存</span>
+        <div class="spacer"></div>
+        <span id="status-lang">zh_cn</span>
+        <span class="dot">·</span>
+        <span id="status-counts"></span>
+      </footer>
+    </div>
+
+    <div id="modal-root"></div>
+    <div id="toast-root"></div>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
