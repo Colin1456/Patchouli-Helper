@@ -17,7 +17,6 @@ import { toast, modal, confirmModal, promptModal, problemsModal, filesModal } fr
 import { deepClone } from './util.js';
 
 const AUTOSAVE_KEY = 'patchouli-helper:project';
-const LAST_PATH_KEY = 'patchouli-helper:lastPath';
 
 const $ = (id) => document.getElementById(id);
 
@@ -265,35 +264,21 @@ const actions = {
     }, { kind: 'structure' });
   },
   addAsset: async () => {
-    if (io.isDesktop()) {
-      const file = await io.pickFile({ title: '选择图片（PNG）', filters: [{ name: 'PNG 图片', extensions: ['png'] }] });
-      if (!file) return;
-      const suggested = `${store.state.project.modid}:textures/gui/entries/${io.splitPath(file).name}`;
-      const resPath = await promptModal({ title: '资源路径', label: '导出时写入 assets/<命名空间>/… 的路径（必须带 textures/）', value: suggested });
-      if (!resPath) return;
-      const base64 = await io.readBase64File(file);
-      store.apply((p) => {
-        p.assets = p.assets.filter((asset) => asset.path !== resPath);
-        p.assets.push({ path: resPath, base64 });
-      }, { kind: 'structure' });
-      toast('已加入工程资源', 'ok');
-      return;
-    }
-    // browser fallback
-    const input = h('input', { type: 'file', accept: 'image/png' });
-    input.addEventListener('change', async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const buffer = new Uint8Array(await file.arrayBuffer());
-      let binary = '';
-      for (let i = 0; i < buffer.length; i += 0x8000) binary += String.fromCharCode(...buffer.subarray(i, i + 0x8000));
-      const suggested = `${store.state.project.modid}:textures/gui/entries/${file.name}`;
-      const resPath = await promptModal({ title: '资源路径', label: '导出时写入 assets/<命名空间>/… 的路径', value: suggested });
-      if (!resPath) return;
-      store.apply((p) => p.assets.push({ path: resPath, base64: btoa(binary) }), { kind: 'structure' });
-      toast('已加入工程资源', 'ok');
+    const file = await io.pickBrowserFile({ accept: 'image/png' });
+    if (!file) return;
+    const suggested = `${store.state.project.modid}:textures/gui/entries/${file.name}`;
+    const resPath = await promptModal({
+      title: '资源路径',
+      label: '导出时写入 assets/<命名空间>/… 的路径（必须带 textures/）',
+      value: suggested,
     });
-    input.click();
+    if (!resPath) return;
+    const base64 = await io.readFileBase64(file);
+    store.apply((p) => {
+      p.assets = (p.assets || []).filter((asset) => asset.path !== resPath);
+      p.assets.push({ path: resPath, base64 });
+    }, { kind: 'structure' });
+    toast('已加入工程资源', 'ok');
   },
   exportWholeBook: () => exportWholeBookModal(),
 };
@@ -385,25 +370,10 @@ async function exportCurrentJson() {
 /* -------------------------------------------------------------- import/save */
 
 async function importFromDisk() {
-  let files = [];
-  if (io.isDesktop()) {
-    const dir = await io.pickFolder({ title: '选择包含 assets/ 或 data/ 的目录（模组资源目录、资源包或存档数据包）' });
-    if (!dir) return;
-    const list = await io.listFiles(dir);
-    for (const relPath of list) {
-      if (!/\.(json|mcmeta)$/i.test(relPath)) continue;
-      files.push({ path: relPath, data: await io.readTextFile(`${dir}/${relPath}`) });
-    }
-  } else {
-    const input = h('input', { type: 'file', webkitdirectory: 'true', multiple: 'true' });
-    const picked = await new Promise((resolve) => {
-      input.addEventListener('change', () => resolve(input.files));
-      input.click();
-    });
-    if (!picked?.length) return;
-    const read = await io.readBrowserFolder(picked);
-    files = read.filter((file) => /\.json$/i.test(file.path));
-  }
+  const picked = await io.pickBrowserFolder();
+  if (!picked.length) return;
+  const read = await io.readBrowserFolder(picked);
+  const files = read.filter((file) => /\.(json|mcmeta)$/i.test(file.path));
 
   const { project, warnings } = importBookFiles(files, { profileId: store.state.project.profileId });
   if (!project) {
@@ -429,45 +399,16 @@ async function saveProject() {
   const project = store.state.project;
   const text = JSON.stringify(project, null, 2);
   const baseName = `${project.modid}-${project.bookId}.phbook`;
-  if (!io.isDesktop()) {
-    downloadBlob(text, baseName, 'application/json');
-    store.markSaved();
-    toast('已下载工程文件', 'ok');
-    return;
-  }
-  const target = await io.pickSaveFile({
-    title: '保存工程',
-    defaultPath: baseName,
-    filters: [{ name: 'Patchouli Helper 工程', extensions: ['phbook', 'json'] }],
-  });
-  if (!target) return;
-  await io.writeTextFile(target, text);
-  store.markSaved(target);
-  localStorage.setItem(LAST_PATH_KEY, target);
-  toast('工程已保存', 'ok');
+  downloadBlob(text, baseName, 'application/json');
+  store.markSaved();
+  toast('已下载工程文件', 'ok');
 }
 
 async function openProject() {
-  if (!io.isDesktop()) {
-    const input = h('input', { type: 'file', accept: '.phbook,.json' });
-    const file = await new Promise((resolve) => {
-      input.addEventListener('change', () => resolve(input.files?.[0] || null));
-      input.click();
-    });
-    if (!file) return;
-    store.replaceProject(normalizeProject(JSON.parse(await file.text())));
-    toast('工程已载入', 'ok');
-    return;
-  }
-  const file = await io.pickFile({
-    title: '打开工程',
-    filters: [{ name: 'Patchouli Helper 工程', extensions: ['phbook', 'json'] }],
-  });
+  const file = await io.pickBrowserFile({ accept: '.phbook,.json' });
   if (!file) return;
   try {
-    const text = await io.readTextFile(file);
-    store.replaceProject(normalizeProject(JSON.parse(text)), { savedPath: file });
-    localStorage.setItem(LAST_PATH_KEY, file);
+    store.replaceProject(normalizeProject(JSON.parse(await file.text())));
     toast('工程已载入', 'ok');
   } catch (error) {
     toast(`打开失败：${error.message || error}`, 'err');
