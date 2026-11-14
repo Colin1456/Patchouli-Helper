@@ -312,7 +312,30 @@ const smallScreen = await evaluate(`(() => {
   return r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight } : null;
 })()`);
 await send('Emulation.clearDeviceMetricsOverride');
+await sleep(200);
+
+// very narrow window: three columns stay side by side and become horizontally scrollable
+await send('Emulation.setDeviceMetricsOverride', { width: 600, height: 800, deviceScaleFactor: 1, mobile: false });
+await sleep(400);
+const narrow = await evaluate(`(() => {
+  const layout = document.querySelector('.layout');
+  const cs = getComputedStyle(layout);
+  const preview = document.querySelector('.preview').getBoundingClientRect();
+  return {
+    overflowX: cs.overflowX,
+    scrollWidth: layout.scrollWidth,
+    clientWidth: layout.clientWidth,
+    previewRight: Math.round(preview.right),
+    cols: cs.gridTemplateColumns.split(' ').length,
+  };
+})()`);
+await send('Emulation.clearDeviceMetricsOverride');
 await sleep(300);
+check(
+  '窄窗口仍横向三栏（可横向滚动）',
+  narrow.cols === 5 && narrow.overflowX === 'auto' && narrow.previewRight <= narrow.scrollWidth + 1,
+  JSON.stringify(narrow),
+);
 check(
   '1024×600 下书页不超出屏幕',
   Boolean(smallScreen)

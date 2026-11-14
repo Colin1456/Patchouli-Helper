@@ -69,7 +69,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(8px);
   z-index: 20;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
+.topbar::-webkit-scrollbar { display: none; }
+.topbar > * { flex: none; }
 
 .brand { display: flex; align-items: center; gap: 10px; min-width: 210px; }
 .brand-mark {
@@ -176,10 +181,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
   --sidebar-w: 272px;
   --preview-w: 46%;
   display: grid;
-  grid-template-columns: var(--sidebar-w) 5px minmax(260px, 1fr) 5px minmax(240px, var(--preview-w));
+  /* 始终横向三栏：窗口再窄也不换行、不堆叠，改成一整条横向滚动 */
+  grid-template-columns: var(--sidebar-w) 5px minmax(300px, 1fr) 5px minmax(240px, var(--preview-w));
   min-height: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
 }
+.layout > * { min-width: 0; }
+.layout::-webkit-scrollbar { height: 8px; }
+.layout::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
 
 /* draggable column dividers */
 .splitter {
@@ -692,10 +703,6 @@ input[type='number'] { -moz-appearance: textfield; }
 }
 
 @media (max-width: 1000px) {
-  .layout {
-    --sidebar-w: 216px;
-    --preview-w: 40%;
-  }
   .topbar-group .btn { font-size: 12px; }
 }
 

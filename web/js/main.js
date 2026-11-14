@@ -633,12 +633,7 @@ function setupSplitters() {
     });
   }
 
-  // keep columns usable when the window is resized very small
-  window.addEventListener('resize', () => {
-    const rect = layout.getBoundingClientRect();
-    const sidebar = parseFloat(getComputedStyle(layout).getPropertyValue('--sidebar-w')) || 272;
-    if (sidebar > rect.width * 0.45) layout.style.setProperty('--sidebar-w', '200px');
-  });
+  // 窗口过窄时靠 .layout 的横向滚动兜底，不改用户拖出来的列宽
 }
 
 /* --------------------------------------------------------------------- boot */
