@@ -2,7 +2,7 @@
 
 import { h } from '../util.js';
 import { getText, sortBySortnumThenName } from '../model.js';
-import { coverColorsFor, getProfile } from '../profiles.js';
+import { coverColorsFor } from '../profiles.js';
 import { renderRichText, stripCodes } from '../richtext.js';
 import { serializeBook, serializeCategory, serializeEntry, bookJsonPath, entryFileName, categoryFileName } from '../serialize.js';
 import { itemTile } from './fields.js';
@@ -164,7 +164,7 @@ function emptyPage(text = '') {
 /* ------------------------------------------------------------ book preview */
 
 export function renderBookPreview(container, ctx) {
-  const { project, state, profile } = ctx;
+  const { project, state } = ctx;
   const lang = state.ui.lang;
   const macros = macrosObject(project);
   const [cover, coverDark] = coverColorsFor(project.book?.bookTexture);
@@ -257,15 +257,7 @@ export function renderBookPreview(container, ctx) {
   book.append(leftPage, rightPage);
   container.appendChild(book);
 
-  const note = h(
-    'div',
-    { class: 'preview-note' },
-    `${getProfile(project.profileId).label} · ${lang} · book_texture ${project.book?.bookTexture || '默认'}`,
-  );
-  container.appendChild(note);
-
   fitBookToContainer(container, book, { zoom: Boolean(state.ui.zoom) });
-  void profile;
 }
 
 /**
@@ -289,10 +281,8 @@ function fitBookToContainer(container, book, { zoom = false } = {}) {
     const style = getComputedStyle(container);
     const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-    const noteEl = container.querySelector('.preview-note');
-    const noteHeight = noteEl ? noteEl.offsetHeight + 10 : 0;
     const availW = container.clientWidth - padX;
-    const availH = container.clientHeight - padY - noteHeight;
+    const availH = container.clientHeight - padY;
     if (availW <= 40 || availH <= 40) return;
     // the spread is 1 : 0.72 (w : h), so height limits the width at 1/0.72
     const byHeight = availH / 0.72;
