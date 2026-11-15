@@ -1,4 +1,4 @@
-# Patchouli Helper v0.1.0
+# Patchouli Helper v0.1.1
 
 帕秋莉手册（Patchouli）可视化编辑器 —— **单文件 HTML**，双击即用。
 
