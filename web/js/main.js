@@ -560,11 +560,22 @@ function problemsDialog() {
 
 /* ------------------------------------------------------------ 下拉菜单定位 */
 
-/** 顶栏有 overflow-x 滚动容器，菜单用 fixed 定位并在此计算坐标 */
-function positionDropdown(dropdown) {
+/**
+ * 顶栏有 overflow-x + backdrop-filter，二者都会把 position:fixed 的子元素
+ * 拽回顶栏自己的坐标系（只露出半条菜单）。所以打开时把菜单搬到 body 下，
+ * 变成真正的视口级浮层，再按触发按钮的位置摆好。
+ */
+function openDropdown(dropdown) {
   const trigger = dropdown.querySelector('[data-action^="toggle-"]');
   const menu = dropdown.querySelector('.dropdown-menu');
-  if (!trigger || !menu || !dropdown.classList.contains('open')) return;
+  if (!trigger || !menu) return;
+  if (menu.parentElement !== document.body) document.body.appendChild(menu);
+  menu.__trigger = trigger;
+  menu.classList.add('open');
+  positionMenu(trigger, menu);
+}
+
+function positionMenu(trigger, menu) {
   const rect = trigger.getBoundingClientRect();
   const width = menu.offsetWidth || 240;
   const height = menu.offsetHeight || 0;
@@ -576,6 +587,7 @@ function positionDropdown(dropdown) {
 }
 
 function closeDropdowns() {
+  document.querySelectorAll('.dropdown-menu.open').forEach((menu) => menu.classList.remove('open'));
   document.querySelectorAll('.dropdown.open').forEach((el) => el.classList.remove('open'));
 }
 
@@ -603,11 +615,13 @@ document.addEventListener('click', (event) => {
     case 'toggle-import': {
       const dropdown = target.closest('.dropdown');
       if (!dropdown) break;
-      const willOpen = !dropdown.classList.contains('open');
+      const trigger = dropdown.querySelector('[data-action^="toggle-"]');
+      const menu = dropdown.querySelector('.dropdown-menu');
+      const willOpen = !(menu && menu.classList.contains('open'));
       closeDropdowns();
       if (willOpen) {
         dropdown.classList.add('open');
-        positionDropdown(dropdown);
+        openDropdown(dropdown);
       }
       break;
     }
@@ -815,7 +829,9 @@ function checkBrowserSupport() {
 checkBrowserSupport();
 setupSplitters();
 window.addEventListener('resize', () => {
-  document.querySelectorAll('.dropdown.open').forEach(positionDropdown);
+  document.querySelectorAll('.dropdown-menu.open').forEach((menu) => {
+    if (menu.__trigger) positionMenu(menu.__trigger, menu);
+  });
   const el = $('status-viewport');
   if (el) el.textContent = `${Math.round(window.innerWidth)}×${Math.round(window.innerHeight)}`;
 });

@@ -370,6 +370,25 @@ check(
   JSON.stringify(smallScreen),
 );
 
+// 菜单项点击后仍能正常触发（portal 后事件委托不能丢）
+const menuClick = await evaluate(`(async () => {
+  closeAll();
+  function closeAll() {
+    document.querySelectorAll('.dropdown-menu.open').forEach((m) => m.classList.remove('open'));
+  }
+  document.querySelector('[data-action="toggle-export"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 150));
+  const item = document.querySelector('#export-menu [data-action="export-json"]');
+  const before = document.querySelectorAll('.dropdown-menu.open').length;
+  item.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 350));
+  const dialog = document.querySelector('.modal');
+  const after = document.querySelectorAll('.dropdown-menu.open').length;
+  dialog?.querySelector('.icon-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  return { before, after, opened: Boolean(dialog) };
+})()`);
+check('菜单项可点击并关闭菜单', menuClick.before === 1 && menuClick.opened && menuClick.after === 0, JSON.stringify(menuClick));
+
 // Jar 导入：菜单项 + 页面内 zip 解析（含 deflate 解压）
 const jarCheck = await evaluate(`(async () => {
   document.querySelector('[data-action="toggle-import"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -386,9 +405,16 @@ const jarCheck = await evaluate(`(async () => {
     height: Math.round(menuRect.height),
     position: menuStyle.position,
     display: menuStyle.display,
+    zIndex: menuStyle.zIndex,
+    parent: menu.parentElement ? menu.parentElement.tagName : 'none',
     vw: innerWidth,
     vh: innerHeight,
   };
+  // 菜单中心点上最顶层的元素必须属于菜单本身，否则说明被下面的内容盖住了
+  const cx = Math.round(menuRect.left + menuRect.width / 2);
+  const cy = Math.round(menuRect.top + menuRect.height / 2);
+  const topEl = document.elementFromPoint(cx, cy);
+  menuBox.hit = topEl ? (topEl.closest('.dropdown-menu') ? 'menu' : topEl.className || topEl.tagName) : 'none';
   const helper = window.__PATCHOULI_HELPER__;
   const bytes = await helper.buildZip([
     { path: 'data/xmod/patchouli_books/b/book.json', data: '{"name":"X Book","landing_text":"hi"}' },
@@ -400,6 +426,11 @@ const jarCheck = await evaluate(`(async () => {
   return { items, books, firstText: new TextDecoder().decode(first), menuBox };
 })()`);
 const mb = jarCheck.menuBox || {};
+check(
+  '下拉菜单浮在最上层（不被编辑区/预览盖住）',
+  (jarCheck.menuBox || {}).hit === 'menu' && (jarCheck.menuBox || {}).parent === 'BODY',
+  JSON.stringify({ hit: (jarCheck.menuBox || {}).hit, parent: (jarCheck.menuBox || {}).parent, z: (jarCheck.menuBox || {}).zIndex }),
+);
 check(
   '导入下拉菜单完整可见（不被顶栏裁切）',
   mb.position === 'fixed' &&

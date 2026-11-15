@@ -12,7 +12,8 @@
 - **弹窗被顶栏挡住/贴到左上角**：`modal-backdrop` 用的 `inset: 0` 在旧内核不支持，改成 `top/right/bottom/left` 四边 + flex 居中
 - **「导入 ▾ / 导出 ▾」菜单只露出一条**：顶栏 `overflow-x` 会裁掉 `position: absolute` 子元素，改用 `fixed` + JS 按按钮坐标定位
 - `width: min(...)` 换成 `width + max-width`，避免旧内核整条声明失效导致宽度异常
-- `ui-check` 新增「弹窗居中且完整可见」「下拉菜单完整可见」两项断言
+- **下拉菜单只露小半条**：顶栏的 `backdrop-filter` 会把 `position: fixed` 子元素拽回顶栏坐标系，菜单被限制在 48px 高度内 → 改为把菜单 portal 到 `<body>`，成为真正的视口级浮层（z-index 90）
+- `ui-check` 新增「弹窗居中且完整可见」「下拉菜单完整可见」「菜单浮在最上层」「菜单项可点击」四项断言
 
 ## 功能
 
