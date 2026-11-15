@@ -105,8 +105,9 @@ export function promptModal({ title = '输入', label = '', value = '', placehol
   });
 }
 
-export function problemsModal({ problems, onJump }) {
+export function problemsModal({ problems, onJump, note = '', title = null }) {
   const list = h('div', { class: 'problem-list' });
+  if (note) list.appendChild(h('div', { class: 'help', style: { marginBottom: '10px' } }, note));
   if (!problems.length) {
     list.appendChild(h('div', { class: 'help' }, '没有发现问题 ✓'));
   }
@@ -131,7 +132,7 @@ export function problemsModal({ problems, onJump }) {
       ),
     );
   }
-  const instance = modal({ title: `校验结果（${problems.length}）`, body: list, wide: true });
+  const instance = modal({ title: title || `校验结果（${problems.length}）`, body: list, wide: true });
   instance.dialog.querySelector('.modal-body').style.maxHeight = '62vh';
   return instance;
 }

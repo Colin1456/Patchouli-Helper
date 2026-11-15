@@ -47,6 +47,9 @@ await send('Page.navigate', { url });
 await sleep(2500);
 
 const result = await evaluate(`(async () => {
+  window.__err = [];
+  window.addEventListener('error', (e) => window.__err.push(String(e.message)));
+  window.addEventListener('unhandledrejection', (e) => window.__err.push('rej:' + String(e.reason)));
   const helper = window.__PATCHOULI_HELPER__;
   const B = 'assets/ml/patchouli_books/guide';
   const D = 'data/ml/patchouli_books/guide';
@@ -103,9 +106,79 @@ const result = await evaluate(`(async () => {
   const tw = [...document.querySelectorAll('#lang-switch button')].find((b) => b.textContent.includes('繁中'));
   tw?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await new Promise((r) => setTimeout(r, 350));
-  const zeroLang = { ...snap(), entryHints: [...document.querySelectorAll('.editor .field .help')].map((el) => el.innerText.replace(/\\s+/g, ' ').trim()) };
+  const zeroLang = {
+    ...snap(),
+    entryHints: [...document.querySelectorAll('.editor .field .help')].map((el) => el.innerText.replace(/\\s+/g, ' ').trim()),
+  };
 
-  return { before, afterSwitch, entryView, secondEntry, zeroLang };
+  // 明细弹窗
+  const detailBtn = [...document.querySelectorAll('#i18n-notice .btn')].find((b) => b.textContent.includes('明细'));
+  detailBtn?.click();
+  await new Promise((r) => setTimeout(r, 250));
+  const detailModal = {
+    buttons: [...document.querySelectorAll('#i18n-notice .btn')].map((b) => b.textContent),
+    title: document.querySelector('.modal-head h3')?.textContent || null,
+    note: document.querySelector('.problem-list .help')?.innerText.replace(/\\s+/g, ' ').trim() || null,
+    rows: [...document.querySelectorAll('.problem-list .problem')].map((r) => r.innerText.replace(/\\s+/g, ' ').trim()),
+    backdrops: document.querySelectorAll('.modal-backdrop').length,
+  };
+  document.querySelector('.modal-head .icon-btn')?.click();
+  await new Promise((r) => setTimeout(r, 200));
+
+  // 全译场景：模拟「我中文明明全做了」的模组
+  const fullFiles = [];
+  const push = (path, data) => fullFiles.push({ path, data: JSON.stringify(data) });
+  push(D + '/book.json', { name: 'Guide', landing_text: 'Hi', use_resource_pack: true });
+  for (const lang of ['en_us', 'zh_cn']) {
+    const zh = lang === 'zh_cn';
+    push(B + '/' + lang + '/categories/machines.json', {
+      name: zh ? '机器' : 'Machines',
+      description: zh ? '各种机器' : 'All machines',
+      icon: 'minecraft:furnace',
+    });
+    for (const [id, cn, en] of [['press', '压机', 'Presser'], ['mixer', '搅拌机', 'Mixer']]) {
+      push(B + '/' + lang + '/entries/' + id + '.json', {
+        name: zh ? cn : en,
+        icon: 'minecraft:iron_block',
+        category: 'ml:machines',
+        pages: [{ type: 'patchouli:text', text: zh ? cn + '的正文' : en + ' body' }],
+      });
+    }
+  }
+  const full = helper.importBookFiles(fullFiles).project;
+  helper.store.replaceProject(full);
+  await new Promise((r) => setTimeout(r, 350));
+  const fullZoom = {};
+  [...document.querySelectorAll('#lang-switch button')].find((b) => b.textContent.includes('简中'))?.click();
+  await new Promise((r) => setTimeout(r, 350));
+  const fullZhSnap = {
+    statusLang: document.getElementById('status-lang')?.textContent,
+    notice: document.getElementById('i18n-notice')?.innerText.replace(/\\s+/g, ' ').trim() || null,
+    treeTags: [...document.querySelectorAll('.tree-node .tag')].map((t) => t.textContent),
+    chipClasses: [...document.querySelectorAll('#lang-switch button')].map((b) => b.textContent.trim() + ':' + b.className),
+    coverage: helper.langCoverage(),
+  };
+
+  // 半翻译：整条有译文但缺「名称」——仍算已译，编辑框空着 + en_us 占位
+  const proj = helper.store.state.project;
+  const press = proj.entries.find((e) => e.id === 'press');
+  press.data.name.zh_cn = '';
+  helper.store.setUi({ selection: { kind: 'entry', id: 'press' }, previewPage: 0 }, 'selection');
+  await new Promise((r) => setTimeout(r, 300));
+  const nameInput = [...document.querySelectorAll('.editor .field')]
+    .find((f) => f.dataset.fieldKey === 'name')
+    ?.querySelector('input');
+  const halfDone = {
+    statusLang: document.getElementById('status-lang')?.textContent,
+    notice: document.getElementById('i18n-notice')?.innerText.replace(/\\s+/g, ' ').trim() || null,
+    treeTags: [...document.querySelectorAll('.tree-node .tag')].map((t) => t.textContent),
+    nameValue: nameInput?.value,
+    namePlaceholder: nameInput?.getAttribute('placeholder'),
+    preview: document.querySelector('#preview-body .book')?.innerText.replace(/\\s+/g, ' ').slice(0, 60),
+    errors: window.__err.slice(0, 4),
+  };
+
+  return { before, afterSwitch, entryView, secondEntry, zeroLang, detailModal, fullZhSnap, halfDone };
 })()`);
 
 console.log(JSON.stringify(result, null, 2));

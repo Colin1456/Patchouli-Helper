@@ -12,7 +12,18 @@ import {
   textSlots,
 } from './model.js';
 import { createStore } from './store.js';
-import { buildExport, buildLangFile, serializeBook, serializeCategory, serializeEntry } from './serialize.js';
+import {
+  buildExport,
+  buildLangFile,
+  serializeBook,
+  serializeCategory,
+  serializeEntry,
+  langKeySlots,
+  categoryHasText,
+  entryHasText,
+  categoryFileName,
+  entryFileName,
+} from './serialize.js';
 import { validateProject, countBySeverity } from './validate.js';
 import { buildZip } from './zip.js';
 import * as io from './io.js';
@@ -207,27 +218,99 @@ function renderChrome() {
  * 每种语言的真实译文覆盖率。以前用 getText() 取样判断，而 getText 会回退到 en_us，
  * 于是「切到简中还是英文」时界面给不出任何提示。这里改用 isTranslatedFor 逐槽统计。
  */
+function isKeyMode(project) {
+  return project.localization === 'keys' || Boolean(project.book?.i18n);
+}
+
+/**
+ * 每种语言的翻译完成度。
+ *
+ * 关键点：Patchouli 的回退粒度是「整份文件」——zh_cn 里缺某个条目就整份用 en_us，
+ * 而 book.json 只有一个、书名/首页文本按语言无关。所以按「字段槽位」算覆盖率会
+ * 冤枉用户（标题留空、book.json 里的书名都算缺翻译），数字对不上「我明明都翻好了」。
+ * 这里改成按 /导出时会真的生成哪个文件/ 来统计，与 serializeContent 的判定完全一致。
+ */
 function langCoverage(project) {
   const result = {};
-  for (const code of project.languages) result[code] = { done: 0, total: 0 };
-  // Patchouli 自身的回退语言永远是 en_us，因此以它作为统计基准
   const base = 'en_us';
-  for (const slot of textSlots(project)) {
-    const raw = slot.holder[slot.key];
-    if (typeof raw !== 'object' || raw === null) continue;
-    // 只统计基准语言里确实有内容的槽位，避免「本来就没写」被算成缺翻译
-    if (!String(raw[base] ?? '').trim()) continue;
-    for (const code of project.languages) {
-      if (code === base) continue;
-      result[code].total += 1;
-      if (isTranslatedFor(raw, code)) result[code].done += 1;
+  const keyMode = isKeyMode(project);
+  for (const code of project.languages) {
+    result[code] = { done: 0, total: 0, missing: [], mode: keyMode ? 'keys' : 'files' };
+  }
+
+  if (keyMode) {
+    // i18n lang key 模式：每一条 lang key 就是一行译文，按槽位统计（书名也算）
+    const slots = [...langKeySlots(project)];
+    for (const slot of slots) {
+      const rawBase = slot.holder?.[slot.field];
+      const baseText = typeof rawBase === 'string' ? rawBase : String(rawBase?.[base] ?? '');
+      if (!String(baseText).trim()) continue; // 基准语言本来就没写的，不算缺翻译
+      for (const code of project.languages) {
+        if (code === base) continue;
+        result[code].total += 1;
+        if (isTranslatedFor(rawBase, code)) result[code].done += 1;
+        else result[code].missing.push({ label: slot.label, where: slot.key, target: null });
+      }
+    }
+  } else {
+    // 文件夹模式：统计「会生成几个 zh_cn 文件」……
+    const items = [];
+    for (const category of project.categories) {
+      items.push({
+        label: `分类「${category.id}」`,
+        where: `assets/<modid>/patchouli_books/<book>/${'{}'}/${categoryFileName(category)}`,
+        has: (lang) => categoryHasText(category, lang),
+        target: { kind: 'category', id: category.id },
+      });
+    }
+    for (const entry of project.entries) {
+      items.push({
+        label: `条目「${entry.id}」`,
+        where: `assets/<modid>/patchouli_books/<book>/${'{}'}/${entryFileName(entry)}`,
+        has: (lang) => entryHasText(entry, lang),
+        target: { kind: 'entry', id: entry.id },
+      });
+    }
+    for (const item of items) {
+      if (!item.has(base)) continue; // en_us 都没内容，中文翻译无从谈起
+      for (const code of project.languages) {
+        if (code === base) continue;
+        result[code].total += 1;
+        if (item.has(code)) result[code].done += 1;
+        else result[code].missing.push({ label: item.label, where: item.where.replace('{}', code), target: item.target });
+      }
     }
   }
-  // 基准语言自身视为全覆盖
+
   for (const code of project.languages) {
-    if (code === base) result[code] = { done: result[code].total || 1, total: result[code].total || 1 };
+    if (code === base) {
+      const total = Math.max(result[code].total, 0);
+      result[code] = { done: total || 1, total: total || 1, missing: [], mode: result[code].mode };
+    }
   }
   return result;
+}
+
+function missingDetailModal(project, coverage, lang) {
+  const ratio = coverage[lang] || { done: 0, total: 0, missing: [] };
+  const label = LANGUAGE_OPTIONS.find((l) => l.code === lang)?.label || lang;
+  const problems = (ratio.missing || []).map((item) => ({
+    severity: 'warning',
+    message: `${item.label} 在 ${lang} 里没有内容`,
+    where: item.where,
+    target: item.target || undefined,
+  }));
+  const note =
+    (ratio.mode === 'keys'
+      ? `${label}：已翻译 ${ratio.done}/${ratio.total || 0} 条 lang key，下面列出还没写的键。`
+      : `${label}：${ratio.done}/${ratio.total || 0} 个分类/条目有译文。Patchouli 的回退粒度是整份文件，下面这些条目在游戏里会整份显示 en_us。`) +
+    ' 点一条可以直接跳过去编辑。';
+  return problemsModal({
+    problems,
+    note,
+    title: `${lang} 未翻译清单（${problems.length}）`,
+    onJump: (target) => store.setUi({ selection: target, previewPage: 0 }, 'selection'),
+  });
 }
 
 function renderI18nNotice(project, coverage) {
@@ -253,9 +336,25 @@ function renderI18nNotice(project, coverage) {
     document.createTextNode(
       ratio.done === 0
         ? ` 还没有译文，下面显示的是 ${base} 的回退文本；改动会保存到 ${lang}，不会动 ${base}。`
-        : ` 已翻译 ${ratio.done}/${ratio.total} 处（${percent}%），标「未译」的条目显示的是 ${base} 回退文本。`,
+        : ratio.mode === 'keys'
+          ? ` 已翻译 ${ratio.done}/${ratio.total} 条 lang key（${percent}%），其余回退 ${base}。`
+          : ` ${ratio.done}/${ratio.total} 个分类/条目有译文（${percent}%），标「未译」的在游戏里会整份回退 ${base}。`,
     ),
   );
+  const missingCount = (ratio.missing || []).length;
+  if (missingCount) {
+    bar.appendChild(
+      h(
+        'button',
+        {
+          class: 'btn tiny',
+          type: 'button',
+          onclick: () => missingDetailModal(project, coverage, lang),
+        },
+        `查看明细（${missingCount}）`,
+      ),
+    );
+  }
   bar.appendChild(
     h(
       'button',
@@ -939,4 +1038,7 @@ globalThis.__PATCHOULI_HELPER__ = {
   newPage,
   zipReader: { listZipEntries, readZipEntry, findBooks },
   importBookFiles,
+  // 供诊断脚本 / 控制台使用
+  langCoverage: () => langCoverage(store.state.project),
+  showMissing: (lang = store.state.ui.lang) => missingDetailModal(store.state.project, langCoverage(store.state.project), lang),
 };

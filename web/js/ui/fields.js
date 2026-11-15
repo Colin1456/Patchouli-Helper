@@ -1,8 +1,15 @@
 // Generic form fields generated from schema.js definitions.
 
 import { h, uid } from '../util.js';
-import { getText, setText, isTranslatedFor } from '../model.js';
+import { getText, setText } from '../model.js';
 import { richTextEditor } from './rte.js';
+import { stripCodes } from '../richtext.js';
+
+/** 把一段文本压成一行短提示（去掉帕秋莉的 $(...) 格式码）。 */
+function clipText(text, max) {
+  const flat = stripCodes(String(text || '')).replace(/\s+/g, ' ').trim();
+  return flat.length > max ? `${flat.slice(0, max)}…` : flat;
+}
 
 /** Small deterministic colour for an item id tile. */
 export function itemColor(id) {
@@ -13,6 +20,18 @@ export function itemColor(id) {
 }
 
 /** Item icon stand-in (MC textures are not available to the editor). */
+/**
+ * 当前语言下这个字段的真实状态。
+ * 编辑框里只显示「本语言真正存了什么」，en_us 的内容放在 placeholder 里，
+ * 否则用户会以为框里的英文已经是译文（这就是「切到简中还是英文」的误解来源）。
+ */
+function translationState(holder, key, lang) {
+  const raw = holder?.[key];
+  const own = getText(holder, key, lang, { fallback: false });
+  const base = typeof raw === 'string' ? raw : String(raw?.en_us ?? '');
+  return { own: String(own ?? ''), base, untranslated: Boolean(base.trim()) && !String(own ?? '').trim() };
+}
+
 export function itemTile(id, size = 20) {
   const text = String(id || '?');
   const short = text.replace(/^[a-z0-9_]+:/, '').replace(/_/g, ' ');
@@ -62,7 +81,8 @@ export function renderField(field, ctx) {
   const fire = onChangeHandler(ctx);
 
   if (field.i18n) {
-    const current = getText(holder, field.key, lang);
+    const state = translationState(holder, field.key, lang);
+    const current = state.own;
     if (field.type === 'richtext') {
       wrapper.appendChild(labelOf(field));
       wrapper.appendChild(
@@ -76,16 +96,19 @@ export function renderField(field, ctx) {
           },
         }),
       );
-      if (!isTranslatedFor(holder[field.key], lang)) {
+      if (state.untranslated) {
         wrapper.appendChild(
-          h('div', { class: 'help warn-text' }, `${lang} 未翻译：导出时这里会用回退语言（en_us）的文本`),
+          h('div', { class: 'help warn-text' }, `${lang} 未填写：游戏里这里显示 en_us 的「${clipText(state.base, 40)}」`),
         );
       }
       if (field.help) wrapper.appendChild(h('div', { class: 'help' }, field.help));
       return wrapper;
     }
     wrapper.appendChild(labelOf(field));
-    const input = h('input', { type: 'text', placeholder: field.placeholder || '' });
+    const hint = state.untranslated
+      ? `（${lang} 未填写，游戏里显示 en_us：${clipText(state.base, 40)}）`
+      : field.placeholder || '';
+    const input = h('input', { type: 'text', placeholder: hint });
     input.value = current;
     input.addEventListener('input', () => {
       setText(holder, field.key, lang, input.value);

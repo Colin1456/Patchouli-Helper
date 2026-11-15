@@ -484,6 +484,100 @@ check(
   JSON.stringify(multiLang),
 );
 
+// 翻译完成度：全译的书必须是 100%（用户会说「我中文明明全做了」），
+// 缺一条时要能点出「未翻译清单」，且编辑框不能把 en_us 冒充成译文。
+const coverageCheck = await evaluate(`(async () => {
+  const helper = window.__PATCHOULI_HELPER__;
+  const B = 'assets/cv/patchouli_books/guide';
+  const files = [{ path: 'data/cv/patchouli_books/guide/book.json', data: JSON.stringify({ name: 'Guide', landing_text: 'Hi', use_resource_pack: true }) }];
+  const push = (path, data) => files.push({ path, data: JSON.stringify(data) });
+  for (const lang of ['en_us', 'zh_cn']) {
+    const zh = lang === 'zh_cn';
+    push(B + '/' + lang + '/categories/machines.json', { name: zh ? '机器' : 'Machines', description: zh ? '各种机器' : 'All machines', icon: 'minecraft:furnace' });
+    for (const [id, cn, en] of [['press', '压机', 'Presser'], ['mixer', '搅拌机', 'Mixer']]) {
+      push(B + '/' + lang + '/entries/' + id + '.json', {
+        name: zh ? cn : en,
+        icon: 'minecraft:iron_block',
+        category: 'cv:machines',
+        pages: [{ type: 'patchouli:text', text: zh ? cn + '的正文' : en + ' body' }],
+      });
+    }
+  }
+  const full = helper.importBookFiles(files).project;
+  helper.store.replaceProject(full);
+  await new Promise((r) => setTimeout(r, 300));
+  [...document.querySelectorAll('#lang-switch button')].find((b) => b.textContent.includes('简中'))?.click();
+  await new Promise((r) => setTimeout(r, 300));
+  const fullState = {
+    status: document.getElementById('status-lang')?.textContent,
+    notice: Boolean(document.getElementById('i18n-notice')),
+    tags: [...document.querySelectorAll('.tree-node .tag')].map((t) => t.textContent),
+    coverage: helper.langCoverage().zh_cn,
+  };
+
+  // 抽掉一条中文译文 → 应出现提示条 + 未译标签 + 明细弹窗
+  const proj = helper.store.state.project;
+  const mixer = proj.entries.find((e) => e.id === 'mixer');
+  mixer.data.name.zh_cn = '';
+  mixer.pages[0].data.text.zh_cn = '';
+  helper.store.setUi({ selection: { kind: 'entry', id: 'press' }, previewPage: 0 }, 'selection');
+  await new Promise((r) => setTimeout(r, 300));
+  const partial = {
+    status: document.getElementById('status-lang')?.textContent,
+    noticeText: document.getElementById('i18n-notice')?.innerText.replace(/\\s+/g, ' ').trim() || null,
+    tags: [...document.querySelectorAll('.tree-node .tag')].map((t) => t.textContent),
+  };
+  [...document.querySelectorAll('#i18n-notice .btn')].find((b) => b.textContent.includes('明细'))?.click();
+  await new Promise((r) => setTimeout(r, 200));
+  const modalState = {
+    title: document.querySelector('.modal-head h3')?.textContent || null,
+    rows: [...document.querySelectorAll('.problem-list .problem')].map((r) => r.innerText.replace(/\\s+/g, ' ').trim()),
+  };
+  document.querySelector('.modal-head .icon-btn')?.click();
+  await new Promise((r) => setTimeout(r, 150));
+
+  // 只缺「名称」：仍算已译，但编辑框留空并提示 en_us
+  const press = proj.entries.find((e) => e.id === 'press');
+  press.data.name.zh_cn = '';
+  helper.store.setUi({ selection: { kind: 'entry', id: 'press' }, previewPage: 0 }, 'selection');
+  await new Promise((r) => setTimeout(r, 300));
+  const nameInput = [...document.querySelectorAll('.editor .field')].find((f) => f.dataset.fieldKey === 'name')?.querySelector('input');
+  const half = {
+    status: document.getElementById('status-lang')?.textContent,
+    value: nameInput?.value,
+    placeholder: nameInput?.getAttribute('placeholder'),
+  };
+  return { fullState, partial, modalState, half };
+})()`);
+
+check(
+  '全译书籍覆盖率为 100%（不误报缺翻译）',
+  coverageCheck.fullState?.coverage?.done === coverageCheck.fullState?.coverage?.total &&
+    coverageCheck.fullState.coverage.total > 0 &&
+    String(coverageCheck.fullState.status || '').includes('100%') &&
+    coverageCheck.fullState.notice === false &&
+    (coverageCheck.fullState.tags || []).length === 0,
+  JSON.stringify(coverageCheck.fullState),
+);
+check(
+  '缺一条译文后出现提示条与「未译」标签',
+  Boolean(coverageCheck.partial?.noticeText) &&
+    (coverageCheck.partial.tags || []).includes('未译') &&
+    /%/.test(coverageCheck.partial.status || '') && !String(coverageCheck.partial.status).includes('100%'),
+  JSON.stringify(coverageCheck.partial),
+);
+check(
+  '「查看明细」列出未翻译条目',
+  /未翻译清单/.test(coverageCheck.modalState?.title || '') &&
+    (coverageCheck.modalState.rows || []).some((r) => r.includes('mixer')),
+  JSON.stringify(coverageCheck.modalState),
+);
+check(
+  '未翻译字段的输入框留空并提示 en_us（不冒充译文）',
+  coverageCheck.half?.value === '' && /en_us/.test(coverageCheck.half?.placeholder || ''),
+  JSON.stringify(coverageCheck.half),
+);
+
 check('无未捕获异常', exceptions.length === 0, exceptions.slice(0, 3).join(' | '));
 check('无 console.error', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 

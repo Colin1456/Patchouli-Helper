@@ -1,17 +1,20 @@
 // Left sidebar: book → categories → entries.
 
 import { h } from '../util.js';
-import { getText, isTranslatedFor, sortBySortnumThenName } from '../model.js';
+import { getText, sortBySortnumThenName } from '../model.js';
+import { categoryHasText, entryHasText } from '../serialize.js';
 import { itemTile } from './fields.js';
 import { stripCodes } from '../richtext.js';
 
-const missing = (raw, lang) => !isTranslatedFor(raw, lang);
-
+// 与导出/游戏一致：整份文件没有任何该语言的内容才算「未译」。
+// （以前用字段判断，条目正文翻了但标题留空就挂「未译」，用户会觉得数字和事实对不上。）
+const untranslatedEntry = (entry, lang) => !entryHasText(entry, lang);
+const untranslatedCategory = (category, lang) => !categoryHasText(category, lang);
 function entryNode(project, entry, state, onSelect) {
   const { lang, selection } = state.ui;
   const name = stripCodes(getText(entry.data, 'name', lang)) || entry.id;
   const selected = selection.kind === 'entry' && selection.id === entry.id;
-  const untranslated = missing(entry.data?.name, lang);
+  const untranslated = untranslatedEntry(entry, lang);
   return h(
     'div',
     {
@@ -28,7 +31,7 @@ function entryNode(project, entry, state, onSelect) {
         { class: 'node-title' },
         h('span', { class: 'label' }, name),
         entry.data?.secret ? h('span', { class: 'tag' }, '隐') : null,
-        untranslated ? h('span', { class: 'tag warn', title: `${lang} 未翻译，显示的是回退文本` }, '未译') : null,
+        untranslated ? h('span', { class: 'tag warn', title: `${lang} 整条未翻译，游戏里会整份显示 en_us` }, '未译') : null,
       ),
       h('div', { class: 'node-sub' }, `${entry.pages?.length || 0} 页`),
     ),
@@ -88,7 +91,7 @@ export function renderTree(container, { project, state, onSelect }) {
             'div',
             { class: 'node-title' },
             h('span', { class: 'label' }, stripCodes(getText(category.data, 'name', lang)) || category.id),
-            missing(category.data?.name, lang) ? h('span', { class: 'tag warn' }, '未译') : null,
+            untranslatedCategory(category, lang) ? h('span', { class: 'tag warn', title: `${lang} 整条未翻译` }, '未译') : null,
           ),
           h('div', { class: 'node-sub' }, `${entries.length} 条目`),
         ),

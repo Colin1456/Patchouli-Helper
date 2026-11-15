@@ -251,11 +251,11 @@ export function buildLangFile(project, lang) {
 
 /* ------------------------------------------------------------ export files */
 
-function categoryHasText(category, lang) {
+export function categoryHasText(category, lang) {
   return ['name', 'description'].some((key) => hasOwnText(category.data, key, lang));
 }
 
-function entryHasText(entry, lang) {
+export function entryHasText(entry, lang) {
   if (hasOwnText(entry.data, 'name', lang)) return true;
   return (entry.pages || []).some((page) =>
     pageFieldsOf(page.type).some((field) => field.i18n && hasOwnText(page.data, field.key, lang)),
