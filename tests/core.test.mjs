@@ -161,3 +161,53 @@ test('normalizeProject repairs a minimal object', () => {
   assert.ok(project.categories.length > 0);
   assert.ok(project.languages.includes('en_us'));
 });
+
+test('jar 导入：能读出模组 jar 里的书并还原成工程', async () => {
+  const { listZipEntries, readZipEntry, findBooks } = await import('../web/js/zip-reader.js');
+
+  // 用自家 zip 写入器造一个"模组 jar"
+  const bookJson = JSON.stringify({ name: 'Jar Book', landing_text: 'hi', use_resource_pack: true }, null, 2);
+  const catJson = JSON.stringify({ name: 'Basics', description: 'd', icon: 'minecraft:book' }, null, 2);
+  const entryJson = JSON.stringify(
+    { name: 'Intro', icon: 'minecraft:paper', category: 'jarmod:basics', pages: [{ type: 'patchouli:text', text: 'hello jar' }] },
+    null,
+    2,
+  );
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+
+  const jar = await buildZip([
+    { path: 'META-INF/mods.toml', data: 'modLoader="javafml"' },
+    { path: 'data/jarmod/patchouli_books/guide/book.json', data: bookJson },
+    { path: 'assets/jarmod/patchouli_books/guide/en_us/categories/basics.json', data: catJson },
+    { path: 'assets/jarmod/patchouli_books/guide/en_us/entries/basics/intro.json', data: entryJson },
+    { path: 'assets/jarmod/textures/gui/entries/pic.png', data: png },
+  ]);
+
+  const entries = listZipEntries(jar);
+  const books = findBooks(entries);
+  assert.equal(books.length, 1);
+  assert.equal(books[0].modid, 'jarmod');
+  assert.equal(books[0].bookId, 'guide');
+
+  // 逐条解开，确认 deflate 与 stored 都能读
+  const texts = {};
+  const images = {};
+  for (const entry of entries) {
+    if (entry.name.endsWith('/')) continue;
+    const data = await readZipEntry(jar, entry);
+    if (entry.name.endsWith('.json') || entry.name.endsWith('.toml')) texts[entry.name] = new TextDecoder().decode(data);
+    else images[entry.name] = data;
+  }
+  assert.equal(JSON.parse(texts['data/jarmod/patchouli_books/guide/book.json']).name, 'Jar Book');
+  assert.deepEqual([...images['assets/jarmod/textures/gui/entries/pic.png']], [...png]);
+
+  // 丢进现有的导入器，应该直接还原成工程
+  const files = Object.entries(texts).map(([path, data]) => ({ path, data }));
+  const { project } = importBookFiles(files);
+  assert.ok(project, 'jar 里的书应能被导入');
+  assert.equal(project.modid, 'jarmod');
+  assert.equal(project.bookId, 'guide');
+  assert.equal(project.categories.length, 1);
+  assert.equal(project.entries.length, 1);
+  assert.equal(project.entries[0].pages[0].data.text.en_us, 'hello jar');
+});

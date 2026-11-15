@@ -45,7 +45,7 @@ npm run build:html   # → dist/Patchouli-Helper.html
 | 富文本 | 工具栏插入 `$(l)` 粗体、`$(item)`、`$(l:条目)` 内链、`$(k:)` 按键、`$(t:)` 悬停、颜色盘；输入时实时渲染 |
 | 预览 | 拟真跨页书本：羊皮纸质感、封面配色、翻页；按可用高度自动缩放，两条分隔条可拖动调列宽（双击复位） |
 | 校验 | 缺字段、分类引用不存在、id 非法或含 `en_us`、图片路径没带 `textures/`、`campfire_cooking` 拼错、multiblock 二选一…… 点条目直接跳转 |
-| 导入 | 选一个已有的 `assets/` 或 `data/` 目录，自动还原成工程（含多语言与图片） |
+| 导入 | **一键从 `.jar` / `.zip` 导入**（模组 jar、资源包、数据包都行，自动找 `patchouli_books`、多语言与图片一并还原）；也可选一个 `assets/` 或 `data/` 目录 |
 | 导出 | 资源包 zip（自动附带数据包 zip）、整书 JSON 查看、当前页 JSON 复制 |
 
 ### 为什么导出两个包
@@ -96,7 +96,7 @@ web/                 前端源码（无打包器，ES modules）
   index.html
   css/app.css
   js/  main.js  store.js  model.js  schema.js  serialize.js
-       validate.js  richtext.js  zip.js  io.js  import.js  profiles.js  util.js
+       validate.js  richtext.js  zip.js  zip-reader.js  io.js  import.js  profiles.js  util.js
   js/ui/  tree.js  editor.js  fields.js  rte.js  preview.js  modals.js  rte
   assets/icon-128.png
 scripts/

@@ -346,6 +346,32 @@ check(
   JSON.stringify(smallScreen),
 );
 
+// Jar 导入：菜单项 + 页面内 zip 解析（含 deflate 解压）
+const jarCheck = await evaluate(`(async () => {
+  document.querySelector('[data-action="toggle-import"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 150));
+  const items = [...document.querySelectorAll('#import-menu button')].map((b) => b.dataset.action);
+  const helper = window.__PATCHOULI_HELPER__;
+  const bytes = await helper.buildZip([
+    { path: 'data/xmod/patchouli_books/b/book.json', data: '{"name":"X Book","landing_text":"hi"}' },
+    { path: 'assets/xmod/patchouli_books/b/en_us/entries/a.json', data: '{"name":"A","icon":"minecraft:paper","category":"xmod:c","pages":[]}' },
+  ]);
+  const entries = helper.zipReader.listZipEntries(bytes);
+  const books = helper.zipReader.findBooks(entries);
+  const first = await helper.zipReader.readZipEntry(bytes, entries[0]);
+  return { items, books, firstText: new TextDecoder().decode(first) };
+})()`);
+check(
+  'Jar 导入菜单存在',
+  jarCheck.items.includes('import-jar') && jarCheck.items.includes('import-book'),
+  JSON.stringify(jarCheck.items),
+);
+check(
+  '页面内可解析 jar（deflate 解压正常）',
+  jarCheck.books.length === 1 && /name/.test(jarCheck.firstText),
+  JSON.stringify(jarCheck.books),
+);
+
 const shot = await send('Page.captureScreenshot', { format: 'png' });
 await writeFile(SHOT.replace(/\.png$/, '-json.png'), Buffer.from(shot.data, 'base64'));
 

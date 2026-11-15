@@ -1,6 +1,6 @@
 // Application bootstrap: state, rendering pipeline, actions and export flows.
 
-import { h, downloadBlob, clamp } from './util.js';
+import { h, downloadBlob, clamp, bytesToBase64 } from './util.js';
 import { createProject, normalizeProject, newCategory, newEntry, newPage, getText } from './model.js';
 import { createStore } from './store.js';
 import { buildExport, buildLangFile, serializeBook, serializeCategory, serializeEntry } from './serialize.js';
@@ -8,6 +8,7 @@ import { validateProject, countBySeverity } from './validate.js';
 import { buildZip } from './zip.js';
 import * as io from './io.js';
 import { importBookFiles } from './import.js';
+import { listZipEntries, readZipEntry, findBooks } from './zip-reader.js';
 import { LANGUAGE_OPTIONS, LOADER_PROFILES, PROFILE_IDS, getProfile, shortLang } from './profiles.js';
 import { PAGE_TYPE_KEYS } from './schema.js';
 import { renderTree } from './ui/tree.js';
@@ -378,17 +379,100 @@ async function importFromDisk() {
   if (!picked.length) return;
   const read = await io.readBrowserFolder(picked);
   const files = read.filter((file) => /\.(json|mcmeta)$/i.test(file.path));
+  await applyImportedFiles(files);
+}
 
+/** 从 .jar / .zip（模组 jar、资源包、数据包）一键导入。 */
+async function importFromJar() {
+  const file = await io.pickBrowserFile({ accept: '.jar,.zip' });
+  if (!file) return;
+  toast(`正在读取 ${file.name} …`, 'info', 1800);
+
+  let entries;
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+    entries = listZipEntries(bytes);
+  } catch (error) {
+    toast(`读取失败：${error.message || error}`, 'err', 5000);
+    return;
+  }
+
+  const books = findBooks(entries);
+  if (!books.length) {
+    toast('这个 jar / zip 里没有 patchouli_books，不是 Patchouli 书籍', 'err', 5000);
+    return;
+  }
+  const chosen = books.length === 1 ? books[0] : await chooseBookFromJar(books);
+  if (!chosen) return;
+
+  const prefix = new RegExp(
+    `(^|/)(assets|data)/${escapeRegExp(chosen.modid)}/patchouli_books/${escapeRegExp(chosen.bookId)}/`,
+  );
+  const files = [];
+  for (const entry of entries) {
+    if (entry.name.endsWith('/')) continue;
+    if (!prefix.test(entry.name)) continue;
+    const isJson = /\.(json|mcmeta)$/i.test(entry.name);
+    const isImage = /\/textures\/.+\.(png|jpe?g)$/i.test(entry.name);
+    if (!isJson && !isImage) continue;
+    try {
+      const data = await readZipEntry(bytes, entry);
+      files.push(
+        isJson
+          ? { path: entry.name, data: new TextDecoder('utf-8').decode(data) }
+          : { path: entry.name, data: bytesToBase64(data), base64: true },
+      );
+    } catch (error) {
+      console.warn('[import-jar] 跳过', entry.name, error);
+    }
+  }
+
+  await applyImportedFiles(files);
+}
+
+const escapeRegExp = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function chooseBookFromJar(books) {
+  return new Promise((resolve) => {
+    const list = h('div', { class: 'problem-list' });
+    for (const book of books) {
+      list.appendChild(
+        h(
+          'div',
+          {
+            class: 'problem',
+            onclick: () => {
+              instance.close();
+              resolve(book);
+            },
+          },
+          h('span', { class: 'sev' }),
+          h('div', { class: 'grow' }, h('div', {}, `${book.modid}:${book.bookId}`), h('div', { class: 'where' }, '点击导入这本')),
+        ),
+      );
+    }
+    const instance = modal({
+      title: `这个包里有 ${books.length} 本书，选一本`,
+      body: list,
+      footer: [h('button', { class: 'btn', type: 'button', onclick: () => { instance.close(); resolve(null); } }, '取消')],
+    });
+  });
+}
+
+async function applyImportedFiles(files) {
   const { project, warnings } = importBookFiles(files, { profileId: store.state.project.profileId });
   if (!project) {
     toast(warnings[0] || '导入失败', 'err', 5000);
     return;
   }
+  const imageCount = (project.assets || []).length;
   const ok = await confirmModal({
     title: '导入书籍',
     message: h('div', {},
       h('p', {}, `识别到书：${project.modid}:${project.bookId}`),
       h('p', {}, `分类 ${project.categories.length} 个，条目 ${project.entries.length} 个，语言 ${project.languages.join(', ')}`),
+      imageCount ? h('p', {}, `图片资源 ${imageCount} 个（已一并导入）`) : null,
       warnings.length ? h('ul', {}, ...warnings.map((w) => h('li', { class: 'faint' }, w))) : null,
       h('p', { class: 'faint' }, '当前工程会被替换（可用 Ctrl+Z 撤销）。'),
     ),
@@ -493,8 +577,10 @@ document.addEventListener('click', (event) => {
     case 'open-project': openProject(); break;
     case 'save-project': saveProject(); break;
     case 'import-book': importFromDisk(); break;
+    case 'import-jar': importFromJar(); break;
     case 'validate': problemsDialog(); break;
     case 'toggle-export': target.closest('.dropdown')?.classList.toggle('open'); break;
+    case 'toggle-import': target.closest('.dropdown')?.classList.toggle('open'); break;
     case 'export-resourcepack': exportResourcePackZip(); break;
     case 'export-json': exportCurrentJson(); break;
     case 'export-snapshot': exportWholeBookModal(); break;
@@ -715,4 +801,5 @@ globalThis.__PATCHOULI_HELPER__ = {
   io,
   pageTypes: PAGE_TYPE_KEYS,
   newPage,
+  zipReader: { listZipEntries, readZipEntry, findBooks },
 };

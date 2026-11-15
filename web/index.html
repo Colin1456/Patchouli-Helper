@@ -22,7 +22,13 @@
           <button class="btn ghost" data-action="new-project" title="新建书籍工程">新建</button>
           <button class="btn ghost" data-action="open-project" title="从 .phbook 工程文件打开">打开</button>
           <button class="btn ghost" data-action="save-project" title="保存到 .phbook 工程文件">保存</button>
-          <button class="btn ghost" data-action="import-book" title="从已有的 Patchouli 书籍目录 / 资源包导入">导入</button>
+          <div class="dropdown">
+            <button class="btn ghost" data-action="toggle-import" title="把已有的 Patchouli 书籍导入成工程">导入 ▾</button>
+            <div class="dropdown-menu" id="import-menu">
+              <button data-action="import-jar">从 .jar / .zip 导入（推荐）</button>
+              <button data-action="import-book">从文件夹导入</button>
+            </div>
+          </div>
         </div>
 
         <div class="spacer"></div>
