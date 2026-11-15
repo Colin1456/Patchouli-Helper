@@ -1,6 +1,8 @@
 # Patchouli Helper — 帕秋莉手册可视化编辑器
 
 > 让你简单容易的制作帕秋莉手册模组的手册 / A simple and easy guide for you to make a Patchouli mod handbook
+>
+> **[⬇ 下载最新版](https://github.com/Colin1456/Patchouli-Helper/releases/latest)**（zip 含单文件 HTML）　·　也可以直接双击仓库里的 `dist/Patchouli-Helper.html`
 
 用图形界面写 Minecraft [Patchouli](https://github.com/VazkiiMods/Patchouli) 手册，不用手写 JSON。
 左边是书籍结构树（书 → 分类 → 条目 → 页面），中间是字段表单，右边是**实时书页预览**和 **JSON 预览**。
