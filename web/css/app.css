@@ -145,14 +145,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .dropdown { position: relative; }
 .dropdown-menu {
-  position: absolute; right: 0; top: 36px;
+  /* fixed：顶栏有 overflow-x 滚动容器，absolute 会被裁掉 */
+  position: fixed; left: 0; top: 0;
   min-width: 240px; padding: 6px;
   background: var(--panel-2);
   border: 1px solid var(--line-2);
   border-radius: var(--radius);
   box-shadow: var(--shadow-2);
   display: none;
-  z-index: 60;
+  z-index: 90;
 }
 .dropdown.open .dropdown-menu { display: block; }
 .dropdown-menu button {

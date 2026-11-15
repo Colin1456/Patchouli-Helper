@@ -556,21 +556,39 @@ function problemsDialog() {
   });
 }
 
+/* ------------------------------------------------------------ 下拉菜单定位 */
+
+/** 顶栏有 overflow-x 滚动容器，菜单用 fixed 定位并在此计算坐标 */
+function positionDropdown(dropdown) {
+  const trigger = dropdown.querySelector('[data-action^="toggle-"]');
+  const menu = dropdown.querySelector('.dropdown-menu');
+  if (!trigger || !menu || !dropdown.classList.contains('open')) return;
+  const rect = trigger.getBoundingClientRect();
+  const width = menu.offsetWidth || 240;
+  const height = menu.offsetHeight || 0;
+  const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+  let top = rect.bottom + 6;
+  if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+  menu.style.left = `${Math.round(left)}px`;
+  menu.style.top = `${Math.round(top)}px`;
+}
+
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown.open').forEach((el) => el.classList.remove('open'));
+}
+
 /* ------------------------------------------------------------------- events */
+
 
 document.addEventListener('click', (event) => {
   const origin = event.target instanceof Element ? event.target : null;
   const target = origin?.closest('[data-action]');
   if (!target) {
-    document.querySelectorAll('.dropdown.open').forEach((el) => {
-      if (!origin?.closest('.dropdown')) el.classList.remove('open');
-    });
+    if (!origin?.closest('.dropdown')) closeDropdowns();
     return;
   }
   // menu entries close their dropdown once used
-  if (origin?.closest('.dropdown-menu')) {
-    document.querySelectorAll('.dropdown.open').forEach((el) => el.classList.remove('open'));
-  }
+  if (origin?.closest('.dropdown-menu')) closeDropdowns();
   const action = target.dataset.action;
   switch (action) {
     case 'new-project': newProjectDialog(); break;
@@ -579,8 +597,18 @@ document.addEventListener('click', (event) => {
     case 'import-book': importFromDisk(); break;
     case 'import-jar': importFromJar(); break;
     case 'validate': problemsDialog(); break;
-    case 'toggle-export': target.closest('.dropdown')?.classList.toggle('open'); break;
-    case 'toggle-import': target.closest('.dropdown')?.classList.toggle('open'); break;
+    case 'toggle-export':
+    case 'toggle-import': {
+      const dropdown = target.closest('.dropdown');
+      if (!dropdown) break;
+      const willOpen = !dropdown.classList.contains('open');
+      closeDropdowns();
+      if (willOpen) {
+        dropdown.classList.add('open');
+        positionDropdown(dropdown);
+      }
+      break;
+    }
     case 'export-resourcepack': exportResourcePackZip(); break;
     case 'export-json': exportCurrentJson(); break;
     case 'export-snapshot': exportWholeBookModal(); break;
@@ -785,6 +813,7 @@ function checkBrowserSupport() {
 checkBrowserSupport();
 setupSplitters();
 window.addEventListener('resize', () => {
+  document.querySelectorAll('.dropdown.open').forEach(positionDropdown);
   const el = $('status-viewport');
   if (el) el.textContent = `${Math.round(window.innerWidth)}×${Math.round(window.innerHeight)}`;
 });

@@ -351,6 +351,20 @@ const jarCheck = await evaluate(`(async () => {
   document.querySelector('[data-action="toggle-import"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await new Promise((r) => setTimeout(r, 150));
   const items = [...document.querySelectorAll('#import-menu button')].map((b) => b.dataset.action);
+  const menu = document.querySelector('#import-menu');
+  const menuRect = menu.getBoundingClientRect();
+  const menuStyle = getComputedStyle(menu);
+  const menuBox = {
+    top: Math.round(menuRect.top),
+    bottom: Math.round(menuRect.bottom),
+    left: Math.round(menuRect.left),
+    right: Math.round(menuRect.right),
+    height: Math.round(menuRect.height),
+    position: menuStyle.position,
+    display: menuStyle.display,
+    vw: innerWidth,
+    vh: innerHeight,
+  };
   const helper = window.__PATCHOULI_HELPER__;
   const bytes = await helper.buildZip([
     { path: 'data/xmod/patchouli_books/b/book.json', data: '{"name":"X Book","landing_text":"hi"}' },
@@ -359,8 +373,19 @@ const jarCheck = await evaluate(`(async () => {
   const entries = helper.zipReader.listZipEntries(bytes);
   const books = helper.zipReader.findBooks(entries);
   const first = await helper.zipReader.readZipEntry(bytes, entries[0]);
-  return { items, books, firstText: new TextDecoder().decode(first) };
+  return { items, books, firstText: new TextDecoder().decode(first), menuBox };
 })()`);
+const mb = jarCheck.menuBox || {};
+check(
+  '导入下拉菜单完整可见（不被顶栏裁切）',
+  mb.position === 'fixed' &&
+    mb.display !== 'none' &&
+    mb.height > 40 &&
+    mb.top >= 0 &&
+    mb.bottom <= (mb.vh || 0) + 1 &&
+    mb.right <= (mb.vw || 0) + 1,
+  JSON.stringify(mb),
+);
 check(
   'Jar 导入菜单存在',
   jarCheck.items.includes('import-jar') && jarCheck.items.includes('import-book'),
