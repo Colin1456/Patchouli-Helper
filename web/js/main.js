@@ -667,6 +667,36 @@ window.addEventListener('drop', async (event) => {
   }
 });
 
+/* ------------------------------------------------------- 兼容性自检提示 */
+
+function checkBrowserSupport() {
+  const supports = (prop, value) => Boolean(globalThis.CSS?.supports?.(prop, value));
+  const missing = [];
+  if (!supports('display', 'grid')) missing.push('CSS Grid');
+  if (!supports('aspect-ratio', '1 / 1')) missing.push('aspect-ratio');
+  if (!supports('width', 'clamp(1px, 2vw, 3px)')) missing.push('clamp()');
+  if (!missing.length) return;
+
+  const bar = h(
+    'div',
+    { class: 'compat-bar' },
+    h('strong', {}, '⚠️ 浏览器内核较旧'),
+    ` 缺少 ${missing.join(' / ')}，界面可能被排成竖排或比例异常。建议用最新版 Edge / Chrome 打开这个文件。`,
+    h(
+      'button',
+      {
+        class: 'btn tiny',
+        type: 'button',
+        onclick: () => bar.remove(),
+      },
+      '知道了',
+    ),
+  );
+  $('app').prepend(bar);
+  console.warn('[patchouli-helper] 缺少特性:', missing, '| UA:', navigator.userAgent);
+}
+
+checkBrowserSupport();
 setupSplitters();
 window.addEventListener('resize', () => {
   const el = $('status-viewport');

@@ -178,9 +178,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---------------------------------------------------------------- layout */
 
 .layout {
-  --sidebar-w: clamp(150px, 20vw, 272px);
-  --preview-w: clamp(180px, 46%, 780px);
-  /* 兜底：不支持 grid 的渲染器（老内核 / 受限 WebView）用 flex 也保持横向三栏 */
+  /* 注意：这里刻意不用 clamp()/min()/max() —— 老内核（部分国产浏览器、旧 WebView）
+     不支持这些函数时，整条 grid-template-columns 会失效，五块会从上到下堆叠。 */
+  --sidebar-w: 240px;
+  --preview-w: 46%;
   display: flex;
   flex-wrap: nowrap;
   align-items: stretch;
@@ -195,13 +196,30 @@ button, input, select, textarea { font: inherit; color: inherit; }
     /* 始终横向三栏：窗口再窄也只是等比收窄，绝不换行、绝不堆叠 */
     grid-template-columns: var(--sidebar-w) 5px minmax(0, 1fr) 5px var(--preview-w);
   }
-  .layout > .sidebar { flex: 0 0 var(--sidebar-w); }
 }
-.layout > .sidebar { width: var(--sidebar-w); flex: 0 0 auto; }
+/* 显式列号：万一 grid-template-columns 被浏览器丢弃，也仍然按 5 列横向排列 */
+.layout > .sidebar { grid-column: 1; }
+.layout > .splitter[data-split='sidebar'] { grid-column: 2; }
+.layout > .editor { grid-column: 3; }
+.layout > .splitter[data-split='preview'] { grid-column: 4; }
+.layout > .preview { grid-column: 5; }
+
+.layout > .sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); }
 .layout > .editor { flex: 1 1 auto; }
 .layout > .preview { flex: 0 0 var(--preview-w); }
 .layout > .splitter { flex: 0 0 5px; }
 .layout > * { min-width: 0; }
+
+/* 响应式改用媒体查询（全内核支持） */
+@media (max-width: 1360px) {
+  .layout { --sidebar-w: 220px; --preview-w: 44%; }
+}
+@media (max-width: 1100px) {
+  .layout { --sidebar-w: 190px; --preview-w: 42%; }
+}
+@media (max-width: 860px) {
+  .layout { --sidebar-w: 160px; --preview-w: 38%; }
+}
 .layout::-webkit-scrollbar { height: 8px; }
 .layout::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
 
@@ -455,6 +473,8 @@ input[type='number'] { -moz-appearance: textfield; }
   --paper: #f6e9c9;
   flex: none;
   width: min(700px, 100%);
+  /* aspect-ratio 不被支持时的兜底高度，避免书页塌成一条 */
+  min-height: 300px;
   aspect-ratio: 1 / 0.72;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -721,3 +741,19 @@ input[type='number'] { -moz-appearance: textfield; }
 
 /* keep the book readable when the column is very narrow */
 .preview-body { min-width: 0; }
+/* ---------------------------------------------------------------- compat bar */
+
+.compat-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(240, 180, 95, 0.16);
+  border-bottom: 1px solid rgba(240, 180, 95, 0.45);
+  color: #f4c684;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.compat-bar strong { color: #ffd9a0; }
+.compat-bar .btn { margin-left: auto; }
