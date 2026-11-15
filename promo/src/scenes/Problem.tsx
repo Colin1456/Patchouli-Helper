@@ -33,7 +33,7 @@ export const Problem: React.FC<{ durationInFrames: number }> = ({ durationInFram
   return (
     <Fade durationInFrames={durationInFrames}>
       <AbsoluteFill style={{ padding: '64px 110px', display: 'flex', flexDirection: 'column', gap: 30 }}>
-        <Headline kicker="以前的做法" title="一本手册三千行 JSON，错一个逗号全盘不加载" size={54} />
+        <Headline kicker="以前的做法" title="一本手册几千行 JSON，错一个逗号全盘不加载" size={54} />
 
         <div style={{ display: 'flex', gap: 34, alignItems: 'center', flex: 1 }}>
           <Panel label="data/mymod/patchouli_books/guide/book.json" width={790} height={548}>
