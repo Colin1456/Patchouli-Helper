@@ -83,3 +83,22 @@ promo/
 - 文案：每个场景文件里直接改字符串
 - 配色：`src/theme.ts` 的 `C`（与编辑器本体配色一致）
 - 时长：`src/Root.tsx` 的 `durationInFrames`，以及 `src/Promo.tsx` 里 `SCENES` 的 `from/dur`
+
+## 发布素材（发 B站 / 投稿用）
+
+| 文件 | 规格 | 用途 |
+|---|---|---|
+| `out/promo.mp4` | 72s / 1080p / 约 1.7 Mbps / 15 MB | 日常分享、预览 |
+| `out/promo-bilibili-1080p.mp4` | 72s / 1080p / CRF 14 + slow preset（体积大得多） | **上传 B站 用母版**，平台二压后更干净 |
+| `out/cover.png` | 1920×1080 PNG（<2 MB） | 封面（无损） |
+| `out/cover-1146x717.jpg` | 1146×717 JPG 87 KB | 封面（B站建议尺寸，直接传这个最稳） |
+| `out/cover-1920x1080.jpg` | 1920×1080 JPG 171 KB | 封面备用 |
+
+封面是 `src/Cover.tsx`（`Composition id="Cover"`，静态 1 帧）：
+
+```bash
+remotion still Cover out/cover.png --frame=0 --browser-executable="…msedge.exe"
+```
+
+改封面文案直接编辑 `src/Cover.tsx` 里的标题与副标题。
+
