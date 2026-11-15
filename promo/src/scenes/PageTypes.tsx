@@ -200,6 +200,41 @@ export const PageTypes: React.FC<{ durationInFrames: number }> = ({ durationInFr
                 </div>
               </div>
             </MiniDemo>
+
+            <MiniDemo index={3} title="图片页：从导入的素材里挑图">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div
+                  style={{
+                    width: 150,
+                    height: 92,
+                    borderRadius: 10,
+                    background: 'linear-gradient(145deg,#4a3b63,#241a36)',
+                    border: `1px solid ${C.line}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 26,
+                    color: '#b9a3e6',
+                  }}
+                >
+                  🖼
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                  <div style={{ fontSize: 14, color: C.dim, fontFamily: MONO }}>mymod:textures/gui/axe.png</div>
+                  <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.10)' }}>
+                    <div
+                      style={{
+                        width: `${interpolate(frame, [86, 116], [20, 68], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}%`,
+                        height: '100%',
+                        borderRadius: 999,
+                        background: C.accent,
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 13, color: '#8d7fa8' }}>缩放 / 边框 / 居中，所见即所得</div>
+                </div>
+              </div>
+            </MiniDemo>
           </div>
         </div>
       </AbsoluteFill>

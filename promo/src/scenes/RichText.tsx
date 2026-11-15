@@ -6,7 +6,7 @@ import { Fade, Headline } from '../components/ui';
 
 const SOURCE = '挖掉一棵 $(l)树$() 就能开始，\n再用 $(item)工作台$() 合成 $(l:intro)下一节$()，\n按键 $(k:key.jump) 跳跃看 $(t:提示)。';
 
-const TOOLS = ['$(l) 粗体', '$(n) 下划线', '$(item) 物品', '$(l:条目) 内链', '$(k:按键)', '$(t:悬停)', '调色板'];
+const TOOLS = ['B $(l)', 'I $(o)', 'U $(n)', 'S $(m)', '$(item) 物品', '$(thing) 概念', '$(br) 换行', '$(br2) 空行', '$(li) 列表', '$(l:) 内链', '$(k:) 按键', '$(t:) 悬停'];
 
 export const RichText: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
   const frame = useCurrentFrame();
@@ -114,7 +114,7 @@ export const RichText: React.FC<{ durationInFrames: number }> = ({ durationInFra
 
             <Panel label="同一套格式码，代码里也认" height={186}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {['$(l)=粗体', '$(n)=下划线', '$(item)=物品名', '$(l:id)=内链跳转', '$(k:key)=按键', '$(t:)=悬停说明'].map((t) => (
+                {['$(l) 粗体', '$(o) 斜体', '$(m) 删除线', '$(#7a4b2a) 自定义颜色', '$(l:id) 内链', '$(k:key) 按键'].map((t) => (
                   <Chip key={t} mono>
                     {t}
                   </Chip>

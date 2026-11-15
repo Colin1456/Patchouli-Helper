@@ -13,10 +13,10 @@ const SR = 48000;
 const BPM = 120;
 const BEAT = 60 / BPM; // 0.5s
 const BAR = BEAT * 4; // 2s
-const BARS = 30; // 60 秒，与 60s 版宣传片同长
-const DURATION = BAR * BARS; // 60s
+const BARS = 36; // 72 秒，与 72s 版宣传片同长
+const DURATION = BAR * BARS; // 72s
 const N = Math.round(SR * DURATION);
-const CUTS = [4.2, 10.7, 19.7, 28.7, 35.7, 44.2, 50.7, 56.7]; // 九个场景的切换点
+const CUTS = [4.2, 10.7, 21.3, 29.8, 37.0, 43.0, 49.7, 55.7, 61.4, 68.3]; // 十一个场景的切换点
 
 const left = new Float32Array(N);
 const right = new Float32Array(N);
@@ -228,8 +228,11 @@ const barStart = (bar) => bar * BAR;
 
 /** 按分镜分段：每段配器不同，切换点落在场景边界附近 */
 const sectionOf = (bar) =>
-  bar < 2 ? 'intro' : bar < 6 ? 'tension' : bar < 10 ? 'groove' : bar < 15 ? 'main'
-    : bar < 18 ? 'light' : bar < 22 ? 'warm' : bar < 26 ? 'build' : bar < 29 ? 'peak' : 'outro';
+  bar < 2 ? 'intro' : bar < 6 ? 'tension' : bar < 10 ? 'groove' : bar < 14 ? 'main'
+    : bar < 18 ? 'light' : bar < 25 ? 'warm' : bar < 28 ? 'build' : bar < 34 ? 'peak' : 'outro';
+
+/** 段落起点（用于 inSection 计算） */
+const SECTION_START = { intro: 0, tension: 2, groove: 6, main: 10, light: 14, warm: 18, build: 25, peak: 28, outro: 34 };
 
 const SECTION_PAD = {
   intro: 0.34, tension: 0.2, groove: 0.12, main: 0.1, light: 0.09, warm: 0.11, build: 0.1, peak: 0.1, outro: 0.2,
@@ -239,9 +242,7 @@ for (let bar = 0; bar < BARS; bar++) {
   const t0 = barStart(bar);
   const chord = CHORDS[bar % 4];
   const section = sectionOf(bar);
-  const inSection = bar - (section === 'intro' ? 0 : section === 'tension' ? 2 : section === 'groove' ? 6
-    : section === 'main' ? 10 : section === 'light' ? 15 : section === 'warm' ? 18
-    : section === 'build' ? 22 : section === 'peak' ? 26 : 29);
+  const inSection = bar - SECTION_START[section];
 
   pad(t0, chord.tones, BAR * 0.98, SECTION_PAD[section]);
 
@@ -315,9 +316,9 @@ for (let bar = 0; bar < BARS; bar++) {
 }
 
 // 结尾：主和弦长音 + 铃声
-pad(BAR * 29, [57, 60, 64, 69, 72], BAR * 1, 0.26);
-bell(BAR * 29.2, 81, 0.3);
-bell(BAR * 29.6, 76, 0.18);
+pad(BAR * 34, [57, 60, 64, 69, 72], BAR * 2, 0.24);
+bell(BAR * 34.2, 81, 0.3);
+bell(BAR * 34.6, 76, 0.18);
 
 /* ------------------------------------------------------------ 母带处理 */
 
