@@ -31,3 +31,7 @@ desktop.ini
 *.log
 npm-debug.log*
 docs/screenshot-json.png
+
+# ---- 宣传片（Remotion）----
+promo/node_modules/
+promo/out/
