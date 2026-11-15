@@ -1,4 +1,4 @@
-# Patchouli Helper v0.1.1
+# Patchouli Helper v0.1.2
 
 帕秋莉手册（Patchouli）可视化编辑器 —— **单文件 HTML**，双击即用。
 
@@ -6,6 +6,13 @@
 
 `Patchouli-Helper-0.1.0.zip` 解压后双击 `Patchouli-Helper.html`，用 Edge / Chrome 打开即可。
 不需要安装、不需要 Node、不需要联网。
+
+## 修复（相对 v0.1.1）
+
+- **弹窗被顶栏挡住/贴到左上角**：`modal-backdrop` 用的 `inset: 0` 在旧内核不支持，改成 `top/right/bottom/left` 四边 + flex 居中
+- **「导入 ▾ / 导出 ▾」菜单只露出一条**：顶栏 `overflow-x` 会裁掉 `position: absolute` 子元素，改用 `fixed` + JS 按按钮坐标定位
+- `width: min(...)` 换成 `width + max-width`，避免旧内核整条声明失效导致宽度异常
+- `ui-check` 新增「弹窗居中且完整可见」「下拉菜单完整可见」两项断言
 
 ## 功能
 

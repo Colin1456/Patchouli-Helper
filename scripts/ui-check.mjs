@@ -213,11 +213,35 @@ const validateState = await evaluate(`(async () => {
   document.querySelector('[data-action="validate"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await new Promise((r) => setTimeout(r, 400));
   const dialog = document.querySelector('.modal');
+  const backdrop = document.querySelector('.modal-backdrop');
   const closed = Boolean(dialog);
+  let geometry = null;
+  if (dialog && backdrop) {
+    const d = dialog.getBoundingClientRect();
+    const b = backdrop.getBoundingClientRect();
+    geometry = {
+      modal: { left: Math.round(d.left), top: Math.round(d.top), right: Math.round(d.right), bottom: Math.round(d.bottom) },
+      backdrop: { width: Math.round(b.width), height: Math.round(b.height) },
+      viewport: { width: innerWidth, height: innerHeight },
+    };
+  }
   dialog?.querySelector('.icon-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  return { opened: closed, problems: dialog ? dialog.querySelectorAll('.problem').length : -1 };
+  return { opened: closed, problems: dialog ? dialog.querySelectorAll('.problem').length : -1, geometry };
 })()`);
-check('校验弹窗', validateState.opened, JSON.stringify(validateState));
+check('校验弹窗', validateState.opened, JSON.stringify(validateState.problems));
+const geo = validateState.geometry || {};
+const back = geo.backdrop || {};
+const modalBox = geo.modal || {};
+const vp = geo.viewport || {};
+check(
+  '弹窗居中且完整可见（未被顶栏遮挡）',
+  back.width >= (vp.width || 1) - 2 &&
+    back.height >= (vp.height || 1) - 2 &&
+    modalBox.top >= 0 &&
+    modalBox.bottom <= (vp.height || 0) + 1 &&
+    Math.abs((modalBox.left + modalBox.right) / 2 - (vp.width || 0) / 2) < 60,
+  JSON.stringify(geo),
+);
 
 // render every page type without exploding
 const allTypesResult = await safeEval(`(async () => {
