@@ -164,6 +164,8 @@ function renderChrome() {
   $('status-counts').textContent = `${project.categories.length} 分类 · ${project.entries.length} 条目 · ${pages} 页`;
   const buildEl = $('status-build');
   if (buildEl) buildEl.textContent = globalThis.__BUILD__ ? `build ${globalThis.__BUILD__}` : 'dev';
+  const versionEl = $('brand-version');
+  if (versionEl) versionEl.textContent = `v${globalThis.__VERSION__ || 'dev'}`;
   const viewportEl = $('status-viewport');
   if (viewportEl) viewportEl.textContent = `${Math.round(window.innerWidth)}×${Math.round(window.innerHeight)}`;
   $('brand-sub').textContent = project.meta?.name || '帕秋莉手册可视化编辑器';

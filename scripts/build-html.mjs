@@ -54,6 +54,8 @@ const head = [
 ].filter(Boolean).join('\n');
 
 // 构建时间戳：状态栏会显示，方便确认打开的是不是最新那份文件
+const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+const version = pkg.version || '0.0.0';
 const stamp = new Date()
   .toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' })
   .replace(/:\d\d$/, '')
@@ -63,6 +65,7 @@ const script = [
   '    <script>',
   `    /*! Patchouli Helper 单文件版 build ${stamp}（由 scripts/build-html.mjs 生成，请勿手改） */`,
   `    window.__BUILD__ = ${JSON.stringify(stamp)};`,
+  `    window.__VERSION__ = ${JSON.stringify(version)};`,
   js,
   '    </script>',
 ].join('\n');
