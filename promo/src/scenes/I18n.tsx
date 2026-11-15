@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
-import { C, FONT } from '../theme';
+import { C, FONT, MONO } from '../theme';
 import { Fade, Headline, NoteBar } from '../components/ui';
 
 const LANGS: Array<{ short: string; code: string; ratio: string; full: boolean }> = [
@@ -60,7 +60,7 @@ export const I18n: React.FC<{ durationInFrames: number }> = ({ durationInFrames 
 
   return (
     <Fade durationInFrames={durationInFrames}>
-      <AbsoluteFill style={{ padding: '78px 120px', display: 'flex', flexDirection: 'column', gap: 44 }}>
+      <AbsoluteFill style={{ position: 'relative', padding: '78px 120px', display: 'flex', flexDirection: 'column', gap: 44 }}>
         <Headline kicker="多语言" title="中文写到哪了，一眼看得出来" size={62} />
 
         <div style={{ display: 'flex', gap: 90, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
@@ -126,10 +126,82 @@ export const I18n: React.FC<{ durationInFrames: number }> = ({ durationInFrames 
           </div>
 
           {/* 右：完成度环 */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, opacity: enter }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 20,
+              opacity: enter * interpolate(frame, [104, 130], [1, 0.45], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            }}
+          >
             <Ring value={progress} />
             <div style={{ fontSize: 24, color: C.dim, textAlign: 'center', lineWidth: 1 }}>
               统计口径 = 会导出哪个文件
+            </div>
+          </div>
+        </div>
+
+        {/* 「查看明细」弹窗：列出到底哪几条没译，点一条能跳过去 */}
+        <div
+          style={{
+            position: 'absolute',
+            right: 92,
+            bottom: 104,
+            width: 760,
+            opacity: interpolate(frame, [112, 140], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            translate: interpolate(frame, [112, 140], ['0px 40px', '0px 0px'], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            }),
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 16,
+              border: `1px solid ${C.line}`,
+              background: '#120d1e',
+              boxShadow: '0 18px 40px rgba(0,0,0,0.5)',
+              overflow: 'hidden',
+              fontFamily: FONT,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '14px 20px',
+                borderBottom: `1px solid ${C.line}`,
+                background: '#0d0916',
+              }}
+            >
+              <span style={{ fontSize: 21, color: C.text, fontWeight: 700 }}>zh_tw 未翻译清单（3）</span>
+              <span style={{ marginLeft: 'auto', fontSize: 15, color: C.dim }}>点一条直接跳过去改</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {[
+                ['条目「intro」', 'entries/intro.json'],
+                ['条目「second」', 'entries/second.json'],
+                ['分类「machines」', 'categories/machines.json'],
+              ].map(([label, path], i) => (
+                <div
+                  key={label}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 20px',
+                    borderTop: i ? `1px solid rgba(255,255,255,0.05)` : 'none',
+                    opacity: interpolate(frame, [124 + i * 8, 140 + i * 8], [0, 1], { extrapolateRight: 'clamp' }),
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: C.accent2 }} />
+                  <span style={{ fontSize: 19, color: C.text, width: 240 }}>{label}</span>
+                  <span style={{ fontSize: 15, color: C.dim, fontFamily: MONO }}>assets/…/zh_tw/{path}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 14, color: '#f4c684' }}>未译</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

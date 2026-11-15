@@ -2,10 +2,13 @@ import React from 'react';
 import { AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame } from 'remotion';
 import { C, FONT } from './theme';
 import { Hook } from './scenes/Hook';
+import { Problem } from './scenes/Problem';
 import { Editor } from './scenes/Editor';
 import { PageTypes } from './scenes/PageTypes';
+import { RichText } from './scenes/RichText';
 import { I18n } from './scenes/I18n';
-import { ImportExport } from './scenes/ImportExport';
+import { Import } from './scenes/Import';
+import { Export } from './scenes/Export';
 import { Outro } from './scenes/Outro';
 
 /** 全片共用的背景：深紫夜色 + 缓慢漂移的紫色光晕 + 极淡网格。 */
@@ -50,13 +53,17 @@ export const Backdrop: React.FC = () => {
   );
 };
 
+// 60 秒版：9 个场景，相邻场景重叠 8 帧做交叉淡入
 const SCENES = [
-  { from: 0, dur: 108, Comp: Hook },
-  { from: 100, dur: 206, Comp: Editor },
-  { from: 298, dur: 170, Comp: PageTypes },
-  { from: 460, dur: 176, Comp: I18n },
-  { from: 628, dur: 176, Comp: ImportExport },
-  { from: 796, dur: 164, Comp: Outro },
+  { from: 0, dur: 135, Comp: Hook }, //        0.0–4.5s  开场
+  { from: 127, dur: 203, Comp: Problem }, //   4.2–11.0s 手写 JSON 的痛
+  { from: 322, dur: 278, Comp: Editor }, //    10.7–20.0s 三栏编辑器 + 三段高亮
+  { from: 592, dur: 278, Comp: PageTypes }, // 19.7–29.0s 16 页型 + 3 个细看
+  { from: 862, dur: 218, Comp: RichText }, //  28.7–36.0s 富文本
+  { from: 1072, dur: 263, Comp: I18n }, //     35.7–44.5s 多语言 + 未译清单
+  { from: 1327, dur: 203, Comp: Import }, //   44.2–51.0s jar 导入
+  { from: 1522, dur: 188, Comp: Export }, //   50.7–57.0s 成对导出 + 校验
+  { from: 1702, dur: 98, Comp: Outro }, //     56.7–60.0s 片尾
 ];
 
 export const Promo: React.FC = () => (

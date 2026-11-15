@@ -13,10 +13,10 @@ const SR = 48000;
 const BPM = 120;
 const BEAT = 60 / BPM; // 0.5s
 const BAR = BEAT * 4; // 2s
-const BARS = 16;
-const DURATION = BAR * BARS; // 32s
+const BARS = 30; // 60 秒，与 60s 版宣传片同长
+const DURATION = BAR * BARS; // 60s
 const N = Math.round(SR * DURATION);
-const CUTS = [3.33, 9.93, 15.6, 20.93, 26.53]; // 场景切换点
+const CUTS = [4.2, 10.7, 19.7, 28.7, 35.7, 44.2, 50.7, 56.7]; // 九个场景的切换点
 
 const left = new Float32Array(N);
 const right = new Float32Array(N);
@@ -226,73 +226,98 @@ const CHORDS = [
 
 const barStart = (bar) => bar * BAR;
 
+/** 按分镜分段：每段配器不同，切换点落在场景边界附近 */
+const sectionOf = (bar) =>
+  bar < 2 ? 'intro' : bar < 6 ? 'tension' : bar < 10 ? 'groove' : bar < 15 ? 'main'
+    : bar < 18 ? 'light' : bar < 22 ? 'warm' : bar < 26 ? 'build' : bar < 29 ? 'peak' : 'outro';
+
+const SECTION_PAD = {
+  intro: 0.34, tension: 0.2, groove: 0.12, main: 0.1, light: 0.09, warm: 0.11, build: 0.1, peak: 0.1, outro: 0.2,
+};
+
 for (let bar = 0; bar < BARS; bar++) {
   const t0 = barStart(bar);
   const chord = CHORDS[bar % 4];
-  const section = bar < 2 ? 'intro' : bar < 5 ? 'build' : bar < 10 ? 'main' : bar < 14 ? 'lift' : 'outro';
+  const section = sectionOf(bar);
+  const inSection = bar - (section === 'intro' ? 0 : section === 'tension' ? 2 : section === 'groove' ? 6
+    : section === 'main' ? 10 : section === 'light' ? 15 : section === 'warm' ? 18
+    : section === 'build' ? 22 : section === 'peak' ? 26 : 29);
 
-  // 铺底和声
-  pad(t0, chord.tones, BAR * 0.98, section === 'intro' ? 0.34 : section === 'outro' ? 0.2 : 0.11);
+  pad(t0, chord.tones, BAR * 0.98, SECTION_PAD[section]);
 
   if (section === 'outro') continue;
 
-  // 鼓组
-  if (section !== 'intro') {
-    kick(t0 + 0, 0.95);
+  // ---- 鼓 ----
+  if (section === 'intro') {
+    // 只有 pad，留白
+  } else if (section === 'tension') {
+    // 心跳感：只在第 1 拍，后两小节开始加密
+    kick(t0, 0.75);
+    if (inSection >= 2) kick(t0 + BEAT * 2, 0.55);
+    for (let i = 0; i < 16; i++) hat(t0 + (BAR / 16) * i, 0.035, i % 2 ? 0.5 : -0.5);
+    if (inSection >= 3) snare(t0 + BEAT * 3, 0.16);
+  } else if (section === 'light') {
+    kick(t0, 0.8);
+    kick(t0 + BEAT * 2, 0.7);
+    for (let i = 0; i < 8; i++) hat(t0 + BEAT * 0.5 * i, i % 2 ? 0.06 : 0.09, i % 2 ? 0.4 : -0.4);
+  } else {
+    kick(t0, 0.95);
     kick(t0 + BEAT * 2, 0.85);
-    if (section !== 'build' || bar >= 3) {
+    if (section !== 'groove' || inSection >= 1) {
       kick(t0 + BEAT * 2.5, 0.6);
       snare(t0 + BEAT, 0.26);
       snare(t0 + BEAT * 3, 0.26);
     }
-    if (bar >= 3) {
-      for (let i = 0; i < 8; i++) hat(t0 + BEAT * 0.5 * i, i % 2 ? 0.07 : 0.12, i % 2 ? -0.3 : 0.3);
+    const hats = section === 'build' && inSection >= 2 ? 16 : 8;
+    for (let i = 0; i < hats; i++) {
+      hat(t0 + (BAR / hats) * i, i % 2 ? 0.065 : 0.1, i % 2 ? 0.45 : -0.45);
     }
+  }
+
+  // ---- 贝斯 ----
+  if (section === 'intro') {
+    bassNote(t0, chord.root + 12, BAR, 0.28);
+  } else if (section === 'tension') {
+    bassNote(t0, chord.root, BAR * 0.95, 0.34);
+  } else if (section === 'light') {
+    bassNote(t0, chord.root, BEAT * 3.4, 0.4);
+  } else if (section === 'build' || section === 'peak') {
+    for (let i = 0; i < 8; i++) bassNote(t0 + BEAT * 0.5 * i, chord.root, BEAT * 0.45, 0.5);
   } else {
-    // 前两小节：pad + 低音铺底 + 稀疏拨弦 + 远处的铃声
-    bassNote(t0, chord.root + 12, BAR, 0.3);
-    pluck(t0 + BEAT * 1.5, chord.tones[2], 0.5, 0.24, -0.2);
-    pluck(t0 + BEAT * 3, chord.tones[3], 0.7, 0.2, 0.2);
+    for (const p of [0, 1.5, 2, 3.5]) bassNote(t0 + BEAT * p, chord.root, BEAT * 0.9, 0.5);
+  }
+
+  // ---- 琶音 / 旋律 ----
+  if (section === 'intro') {
+    pluck(t0 + BEAT * 1.5, chord.tones[2], 0.5, 0.24, -0.5);
+    pluck(t0 + BEAT * 3, chord.tones[3], 0.7, 0.2, 0.5);
     bell(t0 + BEAT * 2, chord.tones[3] + 12, 0.12);
-  }
-
-  // 贝斯
-  if (section !== 'intro') {
-    const pattern = section === 'build' ? [0, 2] : [0, 1.5, 2, 3.5];
-    for (const p of pattern) bassNote(t0 + BEAT * p, chord.root, BEAT * 0.9, section === 'build' ? 0.4 : 0.52);
-  }
-
-  // 琶音
-  if (section === 'main' || section === 'lift') {
-    const steps = section === 'lift' ? 16 : 8;
+  } else if (section === 'tension') {
+    pluck(t0 + BEAT * 2.5, chord.tones[1], 0.45, 0.16, 0.6);
+    pluck(t0 + BEAT * 3.5, chord.tones[2], 0.4, 0.13, -0.6);
+  } else if (section === 'groove' || section === 'light' || section === 'warm') {
+    const steps = section === 'groove' && inSection < 2 ? 4 : 8;
     for (let i = 0; i < steps; i++) {
-      const note = chord.tones[i % 4] + (section === 'lift' && i % 8 > 4 ? 12 : 0);
-      pluck(t0 + (BAR / steps) * i, note, 0.3, section === 'lift' ? 0.17 : 0.13, i % 2 ? 1 : -1);
+      pluck(t0 + (BAR / steps) * i, chord.tones[i % 4], 0.32, section === 'light' ? 0.2 : 0.14, i % 2 ? 0.9 : -0.9);
     }
-  }
-
-  // 主旋律（lift 段）：A 小调五声
-  if (section === 'lift' && bar % 2 === 1) {
-    const melody = [
-      [0, 76],
-      [1, 72],
-      [1.5, 74],
-      [2.5, 76],
-      [3, 79],
-    ];
-    for (const [beat, note] of melody) bell(t0 + BEAT * beat, note, 0.2);
+    if (section === 'warm') bell(t0 + BEAT * 2.5, chord.tones[3] + 12, 0.16);
+  } else if (section === 'main' || section === 'build' || section === 'peak') {
+    const steps = section === 'main' && inSection < 3 ? 8 : 16;
+    for (let i = 0; i < steps; i++) {
+      const octave = section !== 'main' && i % 8 > 5 ? 12 : 0;
+      pluck(t0 + (BAR / steps) * i, chord.tones[i % 4] + octave, 0.3, 0.15, i % 2 ? 1 : -1);
+    }
+    if (section === 'peak') {
+      const melody = [[0, 76], [1, 72], [1.5, 74], [2.5, 76], [3, 79]];
+      for (const [beat, note] of melody) bell(t0 + BEAT * beat, note, 0.18);
+    }
   }
 }
 
-airLayer(0.05);
-
-// 场景切换 whoosh
-for (const cut of CUTS) whoosh(cut, 0.2);
-
 // 结尾：主和弦长音 + 铃声
-pad(BAR * 14, [57, 60, 64, 69, 72], BAR * 2, 0.2);
-bell(BAR * 15, 81, 0.3);
-bell(BAR * 15.5, 76, 0.18);
+pad(BAR * 29, [57, 60, 64, 69, 72], BAR * 1, 0.26);
+bell(BAR * 29.2, 81, 0.3);
+bell(BAR * 29.6, 76, 0.18);
 
 /* ------------------------------------------------------------ 母带处理 */
 
