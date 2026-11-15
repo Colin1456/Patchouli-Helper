@@ -1,7 +1,7 @@
 // Generic form fields generated from schema.js definitions.
 
 import { h, uid } from '../util.js';
-import { getText, setText } from '../model.js';
+import { getText, setText, isTranslatedFor } from '../model.js';
 import { richTextEditor } from './rte.js';
 
 /** Small deterministic colour for an item id tile. */
@@ -76,8 +76,10 @@ export function renderField(field, ctx) {
           },
         }),
       );
-      if (!current.trim()) {
-        wrapper.appendChild(h('div', { class: 'help' }, `当前语言 ${lang} 还没有内容，导出时会回退到 en_us`));
+      if (!isTranslatedFor(holder[field.key], lang)) {
+        wrapper.appendChild(
+          h('div', { class: 'help warn-text' }, `${lang} 未翻译：导出时这里会用回退语言（en_us）的文本`),
+        );
       }
       if (field.help) wrapper.appendChild(h('div', { class: 'help' }, field.help));
       return wrapper;

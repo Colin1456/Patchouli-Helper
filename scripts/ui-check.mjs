@@ -455,6 +455,35 @@ check(
 const shot = await send('Page.captureScreenshot', { format: 'png' });
 await writeFile(SHOT.replace(/\.png$/, '-json.png'), Buffer.from(shot.data, 'base64'));
 
+// 端到端：导入含中英双语的 jar → 切到简体中文 → 预览应显示中文
+const multiLang = await evaluate(`(async () => {
+  const helper = window.__PATCHOULI_HELPER__;
+  const files = [
+    { path: 'data/ml/patchouli_books/guide/book.json', data: JSON.stringify({ name: 'Guide', landing_text: 'Hi', use_resource_pack: true }) },
+    { path: 'assets/ml/patchouli_books/guide/en_us/categories/basics.json', data: JSON.stringify({ name: 'Basics', description: 'en', icon: 'minecraft:book' }) },
+    { path: 'assets/ml/patchouli_books/guide/zh_cn/categories/basics.json', data: JSON.stringify({ name: '基础', description: '中文', icon: 'minecraft:book' }) },
+    { path: 'assets/ml/patchouli_books/guide/en_us/entries/intro.json', data: JSON.stringify({ name: 'Intro', icon: 'minecraft:paper', category: 'ml:basics', pages: [{ type: 'patchouli:text', title: 'Start', text: 'English body' }] }) },
+    { path: 'assets/ml/patchouli_books/guide/zh_cn/entries/intro.json', data: JSON.stringify({ name: '简介', icon: 'minecraft:paper', category: 'ml:basics', pages: [{ type: 'patchouli:text', title: '开始', text: '中文正文' }] }) },
+  ];
+  const { project } = helper.importBookFiles(files);
+  helper.store.replaceProject(project);
+  await new Promise((r) => setTimeout(r, 300));
+  const zhBtn = [...document.querySelectorAll('#lang-switch button')].find((b) => b.textContent.includes('简中'));
+  if (!zhBtn) return { error: '没有简体中文按钮', langs: [...document.querySelectorAll('#lang-switch button')].map((b) => b.textContent) };
+  zhBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 300));
+  const firstEntry = document.querySelector('#tree .tree-entry');
+  firstEntry?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 350));
+  const bookText = document.querySelector('#preview-body .book')?.innerText || '';
+  return { lang: document.getElementById('status-lang')?.textContent, bookText: bookText.replace(/\\s+/g, ' ').slice(0, 120) };
+})()`);
+check(
+  '导入双语书籍后切简体中文，预览显示中文',
+  String(multiLang.lang || '').startsWith('zh_cn') && multiLang.bookText.includes('中文正文'),
+  JSON.stringify(multiLang),
+);
+
 check('无未捕获异常', exceptions.length === 0, exceptions.slice(0, 3).join(' | '));
 check('无 console.error', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 

@@ -1,11 +1,11 @@
 // Left sidebar: book → categories → entries.
 
 import { h } from '../util.js';
-import { getText, sortBySortnumThenName } from '../model.js';
+import { getText, isTranslatedFor, sortBySortnumThenName } from '../model.js';
 import { itemTile } from './fields.js';
 import { stripCodes } from '../richtext.js';
 
-const missing = (raw, lang) => !String(getText({ value: raw }, 'value', lang) ?? '').trim();
+const missing = (raw, lang) => !isTranslatedFor(raw, lang);
 
 function entryNode(project, entry, state, onSelect) {
   const { lang, selection } = state.ui;
@@ -28,7 +28,7 @@ function entryNode(project, entry, state, onSelect) {
         { class: 'node-title' },
         h('span', { class: 'label' }, name),
         entry.data?.secret ? h('span', { class: 'tag' }, '隐') : null,
-        untranslated ? h('span', { class: 'tag warn', title: `${lang} 未翻译` }, lang.slice(0, 2)) : null,
+        untranslated ? h('span', { class: 'tag warn', title: `${lang} 未翻译，显示的是回退文本` }, '未译') : null,
       ),
       h('div', { class: 'node-sub' }, `${entry.pages?.length || 0} 页`),
     ),

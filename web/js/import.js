@@ -167,8 +167,9 @@ export function importBookFiles(files, { profileId = 'forge-1.20.1' } = {}) {
       applyFields(entry.data, data, ENTRY_FIELDS, lang);
       const categoryId = String(data.category || '').split(':').pop();
       if (categoryId) entry.category = categoryId;
-      if (Array.isArray(data.pages) && !entry.pages.length) {
-        entry.pages = data.pages.map((rawPage) => importPage(rawPage, lang, warnings));
+      if (Array.isArray(data.pages)) {
+        // 每种语言各有一份 pages：按页号合并，i18n 字段逐语言累积
+        mergePages(entry, data.pages, lang, warnings);
       }
     }
   }
@@ -213,6 +214,33 @@ export function importBookFiles(files, { profileId = 'forge-1.20.1' } = {}) {
   void PAGE_TYPES;
   void pageFieldsOf;
   return { project, warnings, found: book };
+}
+
+
+/**
+ * 把某个语言的 pages 合并进已有页面数组：同页号合并字段，
+ * 文本类字段（{lang: text}）按语言累积，非文本字段以先到者为准。
+ */
+function mergePages(entry, rawPages, lang, warnings) {
+  rawPages.forEach((rawPage, index) => {
+    const incoming = importPage(rawPage, lang, warnings);
+    const target = entry.pages[index];
+    if (!target) {
+      entry.pages[index] = incoming;
+      return;
+    }
+    for (const [key, value] of Object.entries(incoming.data)) {
+      const isLangMap = value !== null && typeof value === 'object' && !Array.isArray(value);
+      const current = target.data[key];
+      if (isLangMap) {
+        const merged = current !== null && typeof current === 'object' && !Array.isArray(current) ? { ...current } : {};
+        Object.assign(merged, value);
+        target.data[key] = merged;
+      } else if (current === undefined || current === null || current === '') {
+        target.data[key] = value;
+      }
+    }
+  });
 }
 
 function importPage(rawPage, lang, warnings) {

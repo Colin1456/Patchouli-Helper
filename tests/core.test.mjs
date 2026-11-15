@@ -211,3 +211,39 @@ test('jar 导入：能读出模组 jar 里的书并还原成工程', async () =>
   assert.equal(project.entries.length, 1);
   assert.equal(project.entries[0].pages[0].data.text.en_us, 'hello jar');
 });
+
+test('多语言导入：zh_cn 的页面文本不会被 en_us 覆盖', () => {
+  const files = [
+    { path: 'data/ml/patchouli_books/guide/book.json', data: JSON.stringify({ name: 'Guide', landing_text: 'Hi', use_resource_pack: true }) },
+    { path: 'assets/ml/patchouli_books/guide/en_us/categories/basics.json', data: JSON.stringify({ name: 'Basics', description: 'en desc', icon: 'minecraft:book' }) },
+    { path: 'assets/ml/patchouli_books/guide/zh_cn/categories/basics.json', data: JSON.stringify({ name: '基础', description: '中文描述', icon: 'minecraft:book' }) },
+    {
+      path: 'assets/ml/patchouli_books/guide/en_us/entries/intro.json',
+      data: JSON.stringify({ name: 'Intro', icon: 'minecraft:paper', category: 'ml:basics', pages: [{ type: 'patchouli:text', title: 'Start', text: 'English body' }] }),
+    },
+    {
+      path: 'assets/ml/patchouli_books/guide/zh_cn/entries/intro.json',
+      data: JSON.stringify({ name: '简介', icon: 'minecraft:paper', category: 'ml:basics', pages: [{ type: 'patchouli:text', title: '开始', text: '中文正文' }] }),
+    },
+  ];
+
+  const { project } = importBookFiles(files);
+  assert.ok(project);
+  assert.deepEqual(project.languages.sort(), ['en_us', 'zh_cn']);
+
+  const entry = project.entries[0];
+  const category = project.categories[0];
+  assert.equal(getText(category.data, 'name', 'zh_cn'), '基础');
+  assert.equal(getText(category.data, 'description', 'zh_cn'), '中文描述');
+  assert.equal(getText(entry.data, 'name', 'zh_cn'), '简介');
+  assert.equal(getText(entry.pages[0].data, 'text', 'en_us'), 'English body');
+  assert.equal(getText(entry.pages[0].data, 'text', 'zh_cn'), '中文正文', '中文页面文本不能被英文覆盖');
+  assert.equal(getText(entry.pages[0].data, 'title', 'zh_cn'), '开始');
+  // 导出时两种语言都应产出对应内容
+  const plan = buildExport(project, { mode: 'mod' });
+  const zhEntry = plan.files.find((f) => f.path.includes('/zh_cn/entries/intro.json'));
+  const enEntry = plan.files.find((f) => f.path.includes('/en_us/entries/intro.json'));
+  assert.ok(zhEntry && enEntry, '两种语言各有一份条目文件');
+  assert.equal(JSON.parse(zhEntry.data).pages[0].text, '中文正文');
+  assert.equal(JSON.parse(enEntry.data).pages[0].text, 'English body');
+});

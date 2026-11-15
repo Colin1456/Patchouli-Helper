@@ -1,7 +1,16 @@
 // Application bootstrap: state, rendering pipeline, actions and export flows.
 
 import { h, downloadBlob, clamp, bytesToBase64 } from './util.js';
-import { createProject, normalizeProject, newCategory, newEntry, newPage, getText } from './model.js';
+import {
+  createProject,
+  normalizeProject,
+  newCategory,
+  newEntry,
+  newPage,
+  getText,
+  isTranslatedFor,
+  textSlots,
+} from './model.js';
 import { createStore } from './store.js';
 import { buildExport, buildLangFile, serializeBook, serializeCategory, serializeEntry } from './serialize.js';
 import { validateProject, countBySeverity } from './validate.js';
@@ -128,15 +137,21 @@ function renderChrome() {
   // language switch
   const switchEl = $('lang-switch');
   switchEl.textContent = '';
+  const coverage = langCoverage(project);
   for (const code of project.languages) {
     const option = LANGUAGE_OPTIONS.find((l) => l.code === code);
-    const translated = hasTranslation(project, code);
+    const ratio = coverage[code] || { done: 0, total: 0 };
+    const percent = ratio.total ? Math.round((ratio.done / ratio.total) * 100) : 100;
+    const level = percent === 100 ? 'full' : percent > 0 ? 'part' : 'none';
     switchEl.appendChild(
       h(
         'button',
         {
-          class: `${state.ui.lang === code ? 'active' : ''}${translated ? ' translated' : ''}`,
-          title: `${option?.label || code} · 点击切换编辑语言`,
+          class: `${state.ui.lang === code ? 'active' : ''}${level === 'full' ? ' translated' : ''}${level === 'none' ? ' blank' : ''}`,
+          title:
+            level === 'none'
+              ? `${option?.label || code} · 还没有任何译文，编辑时会显示 en_us 回退文本`
+              : `${option?.label || code} · 已翻译 ${ratio.done}/${ratio.total} 处（${percent}%）`,
           onclick: () => store.setUi({ lang: code }, 'lang'),
         },
         h('span', { class: 'dotmark' }),
@@ -144,6 +159,19 @@ function renderChrome() {
       ),
     );
   }
+  // 切换语言后给一次性提示，避免「切到简中还是英文」的困惑
+  const lastLang = renderChrome.__lastLang;
+  if (lastLang && lastLang !== state.ui.lang) {
+    const ratio = coverage[state.ui.lang] || { done: 0, total: 0 };
+    const label = LANGUAGE_OPTIONS.find((l) => l.code === state.ui.lang)?.label || state.ui.lang;
+    if (!ratio.done) {
+      toast(`${label} 还没有译文，先显示 en_us 的回退文本；输入后即保存为 ${state.ui.lang}`, 'warn');
+    } else if (ratio.done < ratio.total) {
+      toast(`${label} 已翻译 ${ratio.done}/${ratio.total} 处，其余显示回退文本`, 'warn');
+    }
+  }
+  renderChrome.__lastLang = state.ui.lang;
+  renderI18nNotice(project, coverage);
 
   // problem badge
   const problems = validateProject(project);
@@ -159,7 +187,11 @@ function renderChrome() {
   const dirty = $('status-dirty');
   dirty.textContent = state.ui.dirty ? '未保存' : '已保存';
   dirty.className = state.ui.dirty ? 'dirty' : 'saved';
-  $('status-lang').textContent = state.ui.lang;
+  const currentRatio = coverage[state.ui.lang];
+  $('status-lang').textContent =
+    currentRatio && currentRatio.total
+      ? `${state.ui.lang} ${Math.round((currentRatio.done / currentRatio.total) * 100)}%`
+      : state.ui.lang;
   const pages = project.entries.reduce((sum, entry) => sum + (entry.pages?.length || 0), 0);
   $('status-counts').textContent = `${project.categories.length} 分类 · ${project.entries.length} 条目 · ${pages} 页`;
   const buildEl = $('status-build');
@@ -171,13 +203,70 @@ function renderChrome() {
   $('brand-sub').textContent = project.meta?.name || '帕秋莉手册可视化编辑器';
 }
 
-function hasTranslation(project, lang) {
-  const sample = project.entries.slice(0, 40);
-  if (!sample.length) return true;
-  return sample.some((entry) => {
-    const raw = entry.data?.name;
-    return typeof raw === 'object' && String(raw[lang] ?? '').trim() !== '';
-  });
+/**
+ * 每种语言的真实译文覆盖率。以前用 getText() 取样判断，而 getText 会回退到 en_us，
+ * 于是「切到简中还是英文」时界面给不出任何提示。这里改用 isTranslatedFor 逐槽统计。
+ */
+function langCoverage(project) {
+  const result = {};
+  for (const code of project.languages) result[code] = { done: 0, total: 0 };
+  // Patchouli 自身的回退语言永远是 en_us，因此以它作为统计基准
+  const base = 'en_us';
+  for (const slot of textSlots(project)) {
+    const raw = slot.holder[slot.key];
+    if (typeof raw !== 'object' || raw === null) continue;
+    // 只统计基准语言里确实有内容的槽位，避免「本来就没写」被算成缺翻译
+    if (!String(raw[base] ?? '').trim()) continue;
+    for (const code of project.languages) {
+      if (code === base) continue;
+      result[code].total += 1;
+      if (isTranslatedFor(raw, code)) result[code].done += 1;
+    }
+  }
+  // 基准语言自身视为全覆盖
+  for (const code of project.languages) {
+    if (code === base) result[code] = { done: result[code].total || 1, total: result[code].total || 1 };
+  }
+  return result;
+}
+
+function renderI18nNotice(project, coverage) {
+  const host = document.querySelector('.layout') || $('app');
+  let bar = document.getElementById('i18n-notice');
+  const lang = store.state.ui.lang;
+  const base = 'en_us';
+  const ratio = coverage[lang] || { done: 0, total: 0 };
+  const label = LANGUAGE_OPTIONS.find((l) => l.code === lang)?.label || lang;
+  const percent = ratio.total ? Math.round((ratio.done / ratio.total) * 100) : 100;
+
+  if (!ratio.total || percent === 100) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (!bar) {
+    bar = h('div', { class: 'compat-bar notice-bar', id: 'i18n-notice' });
+    host.prepend(bar);
+  }
+  bar.textContent = '';
+  bar.appendChild(h('strong', {}, `🌐 ${label}（${lang}）`));
+  bar.appendChild(
+    document.createTextNode(
+      ratio.done === 0
+        ? ` 还没有译文，下面显示的是 ${base} 的回退文本；改动会保存到 ${lang}，不会动 ${base}。`
+        : ` 已翻译 ${ratio.done}/${ratio.total} 处（${percent}%），标「未译」的条目显示的是 ${base} 回退文本。`,
+    ),
+  );
+  bar.appendChild(
+    h(
+      'button',
+      {
+        class: 'btn tiny',
+        type: 'button',
+        onclick: () => bar.remove(),
+      },
+      '知道了',
+    ),
+  );
 }
 
 /* ----------------------------------------------------------------- actions */
@@ -849,4 +938,5 @@ globalThis.__PATCHOULI_HELPER__ = {
   pageTypes: PAGE_TYPE_KEYS,
   newPage,
   zipReader: { listZipEntries, readZipEntry, findBooks },
+  importBookFiles,
 };
