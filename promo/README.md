@@ -13,6 +13,21 @@
 | 20.9–26.8s | `ImportExport` | jar → 资源包 + 数据包，版本标签 |
 | 26.5–32.0s | `Outro` | 片尾 logo、仓库地址、版本 |
 
+## 配乐
+
+配乐是**代码合成**的，没有采样、没有版权问题：
+
+```bash
+node scripts/make-music.mjs      # 生成 public/music.wav（32s / 48kHz / 立体声）
+```
+
+- 120 BPM，A 小调 `Am–F–C–G`，16 小节正好 32 秒，与画面同长
+- 五个场景切换点（3.33 / 9.93 / 15.6 / 20.93 / 26.53s）各有一个 whoosh 噪声扫频
+- 段落：0–4s pad 铺底 → 4–10s 鼓进 → 10–20s 琶音 → 20–28s 主旋律 → 28–32s 收尾铃音淡出
+- 母带：tanh 软限幅 + 首尾淡入淡出 + 归一化到 −1 dBFS，脚本会打印峰值和各段 RMS 便于确认没有空段
+
+改速度/和弦/编排都在 `scripts/make-music.mjs` 顶部（`BPM`、`CHORDS`、`CUTS`）。
+
 ## 预览
 
 ```bash

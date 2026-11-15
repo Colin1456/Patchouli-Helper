@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame } from 'remotion';
 import { C, FONT } from './theme';
 import { Hook } from './scenes/Hook';
 import { Editor } from './scenes/Editor';
@@ -61,6 +61,8 @@ const SCENES = [
 
 export const Promo: React.FC = () => (
   <AbsoluteFill style={{ fontFamily: FONT, color: C.text }}>
+    {/* 配乐：scripts/make-music.mjs 纯代码合成（120BPM，A 小调，32s 与画面对齐） */}
+    <Audio src={staticFile('music.wav')} volume={1} />
     <Backdrop />
     {SCENES.map(({ from, dur, Comp }) => (
       <Sequence key={from} from={from} durationInFrames={dur} name={Comp.name || `scene-${from}`}>

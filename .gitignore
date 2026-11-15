@@ -35,3 +35,6 @@ docs/screenshot-json.png
 # ---- 宣传片（Remotion）----
 promo/node_modules/
 promo/out/
+
+# 配乐是脚本生成的产物，跑 node scripts/make-music.mjs 即可重建
+promo/public/music.wav
